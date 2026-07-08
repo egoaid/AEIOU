@@ -175,6 +175,16 @@ body{
   cursor:pointer;
   transition:all .1s;
   letter-spacing:0.5px;
+  /* ── iOS Safari対策 ──────────────────────────────────────────
+     touch-action:manipulation でダブルタップズーム判定の遅延・
+     ジェスチャー誤認識を防止。user-select/tap-callout を無効化しないと
+     ボタン付近の連続タップがテキスト選択モードに化けて以降のタップが
+     効かなくなることがある(オクターブボタン等が「反応しない」問題の主因)。 */
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
 }
 .btn:hover{border-color:var(--accent);color:var(--accent);}
 .btn.on{
@@ -1282,6 +1292,53 @@ var AudioSystem =
     }
     
 }
+
+// ════════════════════════════════════════════════════════════════
+//  ◈ iOS Safari: AudioContext ライフサイクル対策
+//
+//  iOS Safariは「同時に生存できるオーディオセッションの数」を
+//  ページ単位ではなくSafariプロセス単位で管理している。
+//  AudioContextをclose()しないまま何度も生成(STARTの押し直しや
+//  ページのリロード)を繰り返すと、内部的なオーディオセッションが
+//  解放されないまま積み重なり、上限に達した瞬間に新しいAudioContextが
+//  完全に無音のまま失敗するようになる。この状態はページのリロードでは
+//  直らない(iOS側のセッションはページのJSライフサイクルに紐づいていない
+//  ため)。Safariの完全終了が必要になってしまうのを防ぐため、ページが
+//  隠れる/離脱するタイミングで確実にAudioContextをcloseする。
+//
+//  あわせて、電話の着信やSiriの割り込み等でAudioContextが
+//  'interrupted'(iOS固有の状態)になった場合の自動復帰も行う。
+// ════════════════════════════════════════════════════════════════
+function closeAudioContextSafely() {
+  try {
+    if (AudioSystem.audioContext && AudioSystem.audioContext.state !== 'closed') {
+      AudioSystem.audioContext.close();
+    }
+  } catch (e) {}
+}
+window.addEventListener('pagehide', closeAudioContextSafely);
+window.addEventListener('beforeunload', closeAudioContextSafely);
+
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) {
+    // バックグラウンド化: 鳴りっぱなしのノートを全て解放してからsuspend
+    try { if (typeof allOff === 'function') allOff(); } catch (e) {}
+    try { if (typeof releaseAllTouchNotes === 'function') releaseAllTouchNotes(); } catch (e) {}
+    try {
+      if (AudioSystem.audioContext && AudioSystem.audioContext.state === 'running') {
+        AudioSystem.audioContext.suspend();
+      }
+    } catch (e) {}
+  } else {
+    // 復帰時: suspended/interrupted状態からの再開を試みる
+    try {
+      if (AudioSystem.audioContext &&
+          (AudioSystem.audioContext.state === 'suspended' || AudioSystem.audioContext.state === 'interrupted')) {
+        AudioSystem.audioContext.resume();
+      }
+    } catch (e) {}
+  }
+});
 
    
 
@@ -3960,6 +4017,13 @@ function startInstrument() {
   if (AudioSystem.audioContext.state === 'suspended') {
     AudioSystem.audioContext.resume();
   }
+  // iOS Safari対策: 電話着信等での 'interrupted' 状態から自動的にresumeを試みる
+  AudioSystem.audioContext.addEventListener('statechange', function() {
+    var st = AudioSystem.audioContext.state;
+    if ((st === 'suspended' || st === 'interrupted') && !document.hidden) {
+      AudioSystem.audioContext.resume().catch(function(){});
+    }
+  });
 
   // 2. doScriptProcessorをvolume付きでオーバーライド
   //    startSound()の直前に行うことで確実にオーバーライドされる
@@ -5108,6 +5172,18 @@ tractCanvas.addEventListener('touchend', function(e) {
 }, {passive:false});
 
 // ── ピアノ ───────────────────────────────────────────────────────
+// ── iOS Safari対策: touch identifier → note のマップをグローバルに
+// 持たせておくことで、visibilitychange等の外側イベントからも
+// 押しっぱなしになったノートを強制解放できるようにする。
+var touchNoteMap = {};
+function releaseTouchNote(identifier) {
+  var n = touchNoteMap[identifier];
+  if (n !== undefined) { noteOff(n); delete touchNoteMap[identifier]; }
+}
+function releaseAllTouchNotes() {
+  Object.keys(touchNoteMap).forEach(function(id) { releaseTouchNote(id); });
+}
+
 function buildPiano() {
   var piano = document.getElementById('piano');
   var S = 36, E = 96, wi = 0, wp = {};
@@ -5158,7 +5234,6 @@ function buildPiano() {
       if (mouseDragNote >= 0) { noteOff(mouseDragNote); mouseDragNote = -1; }
     }
   });
-  var touchNoteMap = {}; // touch identifier → note (POLY時に他の入力と干渉しないようtouch毎に管理)
   piano.addEventListener('touchstart', function(e) {
     e.preventDefault();
     if (!started) { startInstrument(); return; }
@@ -5174,10 +5249,16 @@ function buildPiano() {
   }, {passive:false});
   piano.addEventListener('touchend', function(e) {
     e.preventDefault();
-    Array.from(e.changedTouches).forEach(function(t) {
-      var n = touchNoteMap[t.identifier];
-      if (n !== undefined) { noteOff(n); delete touchNoteMap[t.identifier]; }
-    });
+    Array.from(e.changedTouches).forEach(function(t) { releaseTouchNote(t.identifier); });
+  }, {passive:false});
+  // ── iOS Safari対策 ────────────────────────────────────────────
+  // 指が少しでも動くと、iOSは横スクロール(piano-wrapのoverflow-x:auto)
+  // と解釈して touchend の代わりに touchcancel を発火させることがある。
+  // これを未処理のままにすると該当ノートのnoteOffが呼ばれず、
+  // 「キーが押しっぱなしで音が鳴りやまない」状態になる。
+  piano.addEventListener('touchcancel', function(e) {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(function(t) { releaseTouchNote(t.identifier); });
   }, {passive:false});
 }
 
