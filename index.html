@@ -327,11 +327,9 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
   <div class="note-disp" id="noteDisp">---</div>
   <div class="hinfo" style="display:flex;align-items:center;gap:10px;">
     <div style="text-align:right;">
-      <div><span class="dot" id="sDot"></span>PINK TROMBONE ENGINE</div>
-      <div id="midiLabel" style="font-size:10px;color:var(--dim);">MIDI —</div>
+      <div><span class="dot" id="sDot"></span><span id="midiLabel" style="font-size:10px;color:var(--dim);">MIDI —</span></div>
     </div>
     <div style="display:flex;gap:3px;">
-      <button id="btnManual" class="btn" style="font-size:10px;padding:3px 10px;">📖 取扱説明書</button>
       <button id="btnLangJa" class="btn on" style="font-size:10px;padding:3px 8px;min-width:32px;">JP</button>
       <button id="btnLangEn" class="btn"    style="font-size:10px;padding:3px 8px;min-width:32px;">EN</button>
     </div>
@@ -356,6 +354,32 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
     <canvas id="charCanvas" width="960" height="220" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
     <!-- フルスクリーンボタン -->
     <button id="btnFullscreen" title="フルスクリーン" style="position:absolute;top:8px;right:8px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:14px;width:30px;height:30px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;backdrop-filter:blur(4px);">⛶</button>
+  </div>
+
+  <!-- ❄ 鍵盤セクション (雪だるまシアター直下 — iPhoneで最下部までスクロールせずに演奏できるように) ❄ -->
+  <div class="kbsec">
+    <div class="kbhdr">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="kbinfo">◈ A W S E D F T G Y H U J K &nbsp;|&nbsp; Z/X: OCT-/+</div>
+        <div class="octrow">
+          <button class="btn" id="bOdn">▼</button>
+          OCT <span class="octnum" id="octNum">4</span>
+          <button class="btn" id="bOup">▲</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;gap:3px;margin-right:4px;">
+          <div class="vd" id="vd0"></div>
+          <div class="vd" id="vd1"></div>
+          <div class="vd" id="vd2"></div>
+          <div class="vd" id="vd3"></div>
+        </div>
+        <button class="btn" id="bRec" style="color:var(--danger);border-color:var(--danger);">⏺ REC</button><span id="recTime" style="font-size:10px;color:var(--danger);min-width:38px;display:inline-block;text-align:center;">0:00</span>
+        <button class="btn" id="bPanic">PANIC</button>
+        <button class="btn" id="bStart">▶ START</button>
+      </div>
+    </div>
+    <div class="piano-wrap"><div class="piano" id="piano"></div></div>
   </div>
 
   <!-- コントロールグリッド -->
@@ -798,36 +822,14 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
     </div>
     <div id="midiPlayerDesc" style="font-size:9px;color:var(--sub);margin-top:7px;line-height:1.6;"></div>
   </div>
-
-  <div class="kbsec">
-    <div class="kbhdr">
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-        <div class="kbinfo">◈ A W S E D F T G Y H U J K &nbsp;|&nbsp; Z/X: OCT-/+</div>
-        <div class="octrow">
-          <button class="btn" id="bOdn">▼</button>
-          OCT <span class="octnum" id="octNum">4</span>
-          <button class="btn" id="bOup">▲</button>
-        </div>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="display:flex;gap:3px;margin-right:4px;">
-          <div class="vd" id="vd0"></div>
-          <div class="vd" id="vd1"></div>
-          <div class="vd" id="vd2"></div>
-          <div class="vd" id="vd3"></div>
-        </div>
-        <button class="btn" id="bRec" style="color:var(--danger);border-color:var(--danger);">⏺ REC</button><span id="recTime" style="font-size:10px;color:var(--danger);min-width:38px;display:inline-block;text-align:center;">0:00</span>
-        <button class="btn" id="bPanic">PANIC</button>
-        <button class="btn" id="bStart">▶ START</button>
-      </div>
-    </div>
-    <div class="piano-wrap"><div class="piano" id="piano"></div></div>
-  </div>
 </div>
-<div class="credit">
-  ❄ Pink Trombone vocal engine © 2017 Neil Thapen (MIT License) · Christmas Edition v1.0 ❄
-  &nbsp;|&nbsp;
-  Additional features © Takeshi Kawamoto — All rights reserved (no copying, redistribution, or modification) · <a href="https://github.com/egoaid/AEIOU" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">github.com/egoaid/AEIOU</a>
+<div class="credit" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+  <div>
+    ❄ Pink Trombone vocal engine © 2017 Neil Thapen (MIT License) · Christmas Edition v1.0 ❄
+    &nbsp;|&nbsp;
+    Additional features © Takeshi Kawamoto — All rights reserved (no copying, redistribution, or modification) · <a href="https://github.com/egoaid/AEIOU" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">github.com/egoaid/AEIOU</a>
+  </div>
+  <button id="btnManual" class="btn" style="font-size:10px;padding:3px 10px;flex-shrink:0;">📖 取扱説明書</button>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
@@ -3375,6 +3377,21 @@ var CONSONANT_PARAMS = {
 var started     = false;
 var currentNote = -1;
 var octave      = 4;
+
+// ── オクターブ切り替え → 鍵盤スクロール連動 ──────────────────────
+// OCTボタン(▼/▲)やZ/Xキーは、従来PCキーボード演奏(QWERTYマッピング)
+// にしか影響しなかった。マウスクリック/タッチ演奏は常に「見えている鍵」
+// をそのまま弾く仕組みなので、オクターブ操作でも鍵盤の表示位置を
+// 該当オクターブへスクロールさせることで、マウス/タッチ演奏にも
+// オクターブ切り替えが反映されているように機能させる。
+function scrollPianoToOctave(oct) {
+  var midiC = (oct + 1) * 12; // QWERTYの'a'キーと同じC音
+  var key = document.querySelector('.piano [data-n="' + midiC + '"]');
+  var wrap = key && key.closest('.piano-wrap');
+  if (!key || !wrap) return;
+  var target = key.offsetLeft - wrap.clientWidth / 2 + key.offsetWidth / 2;
+  wrap.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+}
 var NOTE_NAMES  = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 var modWheelVal = 0; // 0-127
 
@@ -5234,6 +5251,16 @@ function buildPiano() {
       if (mouseDragNote >= 0) { noteOff(mouseDragNote); mouseDragNote = -1; }
     }
   });
+  // ── 鍵盤の横ドラッグ・スクロール対応 ────────────────────────────
+  // touchstartで一律 e.preventDefault() しているため、iOSではネイティブの
+  // 横スクロールが一切効かない(overflow-x:autoが機能しない)。
+  // そこで移動量が閾値を超えた指だけを「ドラッグ」とみなし、
+  // 押していたノートを解放したうえでpiano-wrapのscrollLeftを手動で
+  // 追従させる。閾値未満はそのまま通常の押鍵として扱う。
+  var touchDragState = {}; // touch identifier → {startX, startY, scrollStart, dragging}
+  var pianoWrapEl = piano.parentElement;
+  var PIANO_DRAG_THRESHOLD = 8; // px
+
   piano.addEventListener('touchstart', function(e) {
     e.preventDefault();
     if (!started) { startInstrument(); return; }
@@ -5245,21 +5272,45 @@ function buildPiano() {
         touchNoteMap[t.identifier] = n;
         noteOn(n);
       }
+      touchDragState[t.identifier] = {
+        startX: t.clientX, startY: t.clientY,
+        scrollStart: pianoWrapEl.scrollLeft, dragging: false
+      };
     });
   }, {passive:false});
-  piano.addEventListener('touchend', function(e) {
+
+  piano.addEventListener('touchmove', function(e) {
     e.preventDefault();
-    Array.from(e.changedTouches).forEach(function(t) { releaseTouchNote(t.identifier); });
+    Array.from(e.changedTouches).forEach(function(t) {
+      var st = touchDragState[t.identifier];
+      if (!st) return;
+      var dx = t.clientX - st.startX;
+      var dy = t.clientY - st.startY;
+      if (!st.dragging && Math.abs(dx) > PIANO_DRAG_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+        st.dragging = true;
+        // ドラッグへ切り替わった瞬間、鳴っていたノートは解放する
+        releaseTouchNote(t.identifier);
+      }
+      if (st.dragging) {
+        pianoWrapEl.scrollLeft = st.scrollStart - dx;
+      }
+    });
   }, {passive:false});
+
+  function endPianoTouch(e) {
+    e.preventDefault();
+    Array.from(e.changedTouches).forEach(function(t) {
+      releaseTouchNote(t.identifier);
+      delete touchDragState[t.identifier];
+    });
+  }
+  piano.addEventListener('touchend', endPianoTouch, {passive:false});
   // ── iOS Safari対策 ────────────────────────────────────────────
   // 指が少しでも動くと、iOSは横スクロール(piano-wrapのoverflow-x:auto)
   // と解釈して touchend の代わりに touchcancel を発火させることがある。
   // これを未処理のままにすると該当ノートのnoteOffが呼ばれず、
   // 「キーが押しっぱなしで音が鳴りやまない」状態になる。
-  piano.addEventListener('touchcancel', function(e) {
-    e.preventDefault();
-    Array.from(e.changedTouches).forEach(function(t) { releaseTouchNote(t.identifier); });
-  }, {passive:false});
+  piano.addEventListener('touchcancel', endPianoTouch, {passive:false});
 }
 
 function highlightKey(n, on) {
@@ -5275,8 +5326,8 @@ document.addEventListener('keydown', function(e) {
   var manualEl = document.getElementById('manualOverlay');
   if (manualEl && manualEl.classList.contains('open')) return; // 取扱説明書を開いている間は鍵盤演奏を無効化
   var k = e.key.toLowerCase();
-  if (k === 'z') { octave = Math.max(1,octave-1); document.getElementById('octNum').textContent = octave; return; }
-  if (k === 'x') { octave = Math.min(7,octave+1); document.getElementById('octNum').textContent = octave; return; }
+  if (k === 'z') { octave = Math.max(1,octave-1); document.getElementById('octNum').textContent = octave; scrollPianoToOctave(octave); return; }
+  if (k === 'x') { octave = Math.min(7,octave+1); document.getElementById('octNum').textContent = octave; scrollPianoToOctave(octave); return; }
   if (k in KM && !heldKeys.has(k)) {
     e.preventDefault(); // ブラウザデフォルト動作(スクロール等)を防止
     heldKeys.add(k);
@@ -5507,8 +5558,8 @@ document.getElementById('vowelRow').addEventListener('click', function(e) {
   if (started) applyVowel(b.dataset.v);
 });
 
-document.getElementById('bOdn').addEventListener('click', function() { octave = Math.max(1,octave-1); document.getElementById('octNum').textContent = octave; });
-document.getElementById('bOup').addEventListener('click', function() { octave = Math.min(7,octave+1); document.getElementById('octNum').textContent = octave; });
+document.getElementById('bOdn').addEventListener('click', function() { octave = Math.max(1,octave-1); document.getElementById('octNum').textContent = octave; scrollPianoToOctave(octave); });
+document.getElementById('bOup').addEventListener('click', function() { octave = Math.min(7,octave+1); document.getElementById('octNum').textContent = octave; scrollPianoToOctave(octave); });
 document.getElementById('bPanic').addEventListener('click', allOff);
 document.getElementById('bStart').addEventListener('click', startInstrument);
 
@@ -6045,7 +6096,7 @@ function setState(s) {
   if(s.dna2jit!==undefined){ set('sDnaJit2',s.dna2jit); set('sDnaShim2',s.dna2shim||0); set('sDnaBreath2',s.dna2breath||0); set('sDnaTilt2',s.dna2tilt||0); set('sDnaPharynx2',s.dna2pharynx||0); }
   if(s.dna3jit!==undefined){ set('sDnaJit3',s.dna3jit); set('sDnaShim3',s.dna3shim||0); set('sDnaBreath3',s.dna3breath||0); set('sDnaTilt3',s.dna3tilt||0); set('sDnaPharynx3',s.dna3pharynx||0); }
   // プリセットのオクターブ設定 (PCキーボード演奏時に自動適用)
-  if(s.octave!==undefined){ octave=s.octave; document.getElementById('octNum').textContent=octave; }
+  if(s.octave!==undefined){ octave=s.octave; document.getElementById('octNum').textContent=octave; scrollPianoToOctave(octave); }
 }
 
 // ── 30プリセット定義 ─────────────────────────────────────────────
