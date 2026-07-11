@@ -5263,19 +5263,29 @@ function buildPiano() {
 
   piano.addEventListener('touchstart', function(e) {
     e.preventDefault();
-    if (!started) { startInstrument(); return; }
+    var wasStarted = started;
+    if (!started) startInstrument();
     Array.from(e.changedTouches).forEach(function(t) {
       var el = document.elementFromPoint(t.clientX, t.clientY);
       var k = el && el.closest('[data-n]');
-      if (k) {
-        var n = +k.dataset.n;
-        touchNoteMap[t.identifier] = n;
-        noteOn(n);
-      }
       touchDragState[t.identifier] = {
         startX: t.clientX, startY: t.clientY,
         scrollStart: pianoWrapEl.scrollLeft, dragging: false
       };
+      if (!k) return;
+      var n = +k.dataset.n;
+      if (wasStarted) {
+        touchNoteMap[t.identifier] = n;
+        noteOn(n);
+      } else {
+        // iOS Safari対策: AudioContextの解錠(resume)は非同期のため、
+        // 起動直後のnoteOn呼び出しでは音が出ないことがある。
+        // mousedownハンドラと同じく200ms待ってから確実に鳴らす。
+        setTimeout(function() {
+          touchNoteMap[t.identifier] = n;
+          noteOn(n);
+        }, 200);
+      }
     });
   }, {passive:false});
 
