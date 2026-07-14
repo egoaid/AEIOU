@@ -1176,6 +1176,110 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 //  All rights reserved (no copying, redistribution, or
 //  modification). https://github.com/egoaid/AEIOU
 // ============================================================
+// ════════════════════════════════════════════════════════════════
+//  ◈ ON-SCREEN DEBUG LOG (Mac接続なしでiPhone実機上から直接確認できる
+//     デバッグパネル)
+//
+//  Web Inspector等の開発者ツールに接続できない環境(iPhone単体)でも、
+//  音声起動シーケンス・タッチイベント・JSエラーを画面上のログとして
+//  直接読めるようにする。右下の「DBG」ボタンでパネルの表示/非表示を
+//  切り替える。デフォルトは折りたたみ状態。
+//  window.onerror / unhandledrejection もここで捕捉するため、
+//  script内のどこで例外が起きてもこのパネルに表示される。
+// ════════════════════════════════════════════════════════════════
+var DBG_LOG = [];
+var DBG_MAX_LINES = 200;
+var dbgPanelEl = null, dbgListEl = null;
+
+function dbgTime() {
+  var d = new Date();
+  return ('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2)+'.'+('00'+d.getMilliseconds()).slice(-3);
+}
+
+function dbg(msg) {
+  var line = '[' + dbgTime() + '] ' + msg;
+  DBG_LOG.push(line);
+  if (DBG_LOG.length > DBG_MAX_LINES) DBG_LOG.shift();
+  if (window.console && console.log) console.log('[AEIOU-DBG] ' + msg);
+  dbgRender();
+}
+
+function dbgRender() {
+  if (!dbgListEl) return;
+  dbgListEl.textContent = DBG_LOG.join('\n');
+  dbgListEl.scrollTop = dbgListEl.scrollHeight;
+}
+
+function dbgInitPanel() {
+  dbgPanelEl = document.createElement('div');
+  dbgPanelEl.id = 'dbgPanel';
+  dbgPanelEl.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;'
+    + 'max-height:42vh;overflow:hidden;display:none;flex-direction:column;'
+    + 'background:rgba(10,10,10,0.94);border-top:2px solid #4A7B6F;';
+  var head = document.createElement('div');
+  head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;'
+    + 'padding:6px 10px;background:#111;color:#9f9;font:11px monospace;flex-shrink:0;';
+  head.innerHTML = '<span>◈ AEIOU DEBUG LOG</span>';
+  var btnClose = document.createElement('button');
+  btnClose.textContent = '閉じる';
+  btnClose.style.cssText = 'font-size:10px;padding:3px 9px;background:#222;color:#fff;border:1px solid #555;border-radius:4px;';
+  btnClose.addEventListener('click', function(){ dbgPanelEl.style.display = 'none'; });
+  var btnCopy = document.createElement('button');
+  btnCopy.textContent = 'コピー';
+  btnCopy.style.cssText = 'font-size:10px;padding:3px 9px;background:#222;color:#fff;border:1px solid #555;border-radius:4px;margin-right:6px;';
+  btnCopy.addEventListener('click', function(){
+    var text = DBG_LOG.join('\n');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){ btnCopy.textContent = 'コピー済み'; setTimeout(function(){btnCopy.textContent='コピー';}, 1200); }).catch(function(){});
+    }
+  });
+  var btnGroup = document.createElement('div');
+  btnGroup.appendChild(btnCopy);
+  btnGroup.appendChild(btnClose);
+  head.appendChild(btnGroup);
+  dbgListEl = document.createElement('pre');
+  dbgListEl.style.cssText = 'margin:0;padding:8px 10px;overflow-y:auto;color:#9f9;'
+    + 'font:10px/1.5 -apple-system,monospace;white-space:pre-wrap;word-break:break-all;flex:1;';
+  dbgPanelEl.appendChild(head);
+  dbgPanelEl.appendChild(dbgListEl);
+  document.body.appendChild(dbgPanelEl);
+
+  var toggleBtn = document.createElement('button');
+  toggleBtn.id = 'dbgToggleBtn';
+  toggleBtn.textContent = 'DBG';
+  toggleBtn.style.cssText = 'position:fixed;right:8px;bottom:8px;z-index:99998;'
+    + 'font:11px monospace;padding:6px 10px;background:rgba(74,123,111,0.85);'
+    + 'color:#fff;border:1px solid #fff;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+  toggleBtn.addEventListener('click', function() {
+    dbgPanelEl.style.display = (dbgPanelEl.style.display === 'none') ? 'flex' : 'none';
+    dbgRender();
+  });
+  document.body.appendChild(toggleBtn);
+
+  dbgRender();
+}
+
+// JS例外・Promise rejectionを全てログへ捕捉(Web Inspectorなしで実機から原因を確認できるようにする)
+window.addEventListener('error', function(e) {
+  dbg('❌ JS ERROR: ' + e.message + '  (' + e.filename + ':' + e.lineno + ':' + e.colno + ')');
+  if (dbgPanelEl) dbgPanelEl.style.display = 'flex';
+});
+window.addEventListener('unhandledrejection', function(e) {
+  dbg('❌ UNHANDLED PROMISE REJECTION: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  if (dbgPanelEl) dbgPanelEl.style.display = 'flex';
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (dbgPanelEl) return;
+  dbgInitPanel();
+  dbg('ページ読み込み完了。UA=' + navigator.userAgent);
+});
+// DOMContentLoadedが既に発火済みの可能性(scriptがbody末尾にあるため)に備える
+if (document.readyState !== 'loading' && !dbgPanelEl) {
+  dbgInitPanel();
+  dbg('ページ読み込み完了(即時)。UA=' + navigator.userAgent);
+}
+
 Math.clamp = function(n,a,b){return n<a?a:n>b?b:n;}
 Math.moveTowards = function(c,t,u,d){if(d===undefined)d=u;return c<t?Math.min(c+u,t):Math.max(c-d,t);}
 Math.gaussian = function(){var s=0;for(var i=0;i<16;i++)s+=Math.random();return(s-8)/4;}
@@ -3880,7 +3984,8 @@ var soloActiveVoice = 0; // SOLOモードで現在使用中の物理Voice index
                           // (POLYと同じ「最も静かな空きVoice」選択ロジックを流用)
 
 function noteOn(midi, velocity) {
-  if (!started) return;
+  if (!started) { dbg('⚠️ noteOn(' + midi + ') が呼ばれたが started=false のため無視された'); return; }
+  dbg('noteOn(' + midi + ', vel=' + (velocity===undefined?80:velocity) + ') harmony=' + currentHarmony);
   velocity = (velocity === undefined) ? 80 : velocity;
 
   // ── POLYモード: 各VoiceへのボイスアロケーションのみでHARMONY処理はスキップ ──
@@ -4025,26 +4130,86 @@ function allOff() {
 }
 
 // ── Audio 起動 ───────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════
+//  ◈ iOS Safari対策: 固定ms待ちを廃止し、実際のAudioContext状態を
+//     根拠に発音するヘルパー
+//
+//  これまでは「初回タッチ/クリック時はstartInstrument()を呼んで
+//  200ms待ってからnoteOn()する」という固定時間待ちだった。
+//  しかしiOSのAudioContext解錠(resume)にかかる時間は端末の負荷・
+//  電源状態・初回起動かどうかで変動するため、200msでは足りない
+//  ことがあり、これが「時々音が出ない」という不安定さの直接原因に
+//  なっていた。
+//
+//  このヘルパーは resume() のPromiseが解決するのを実際に待ってから
+//  発音する。Promiseが万一解決しない/遅い場合に備えて400msの
+//  タイムアウトも保険として設定し、確実にどちらか早い方で発音される
+//  ようにする(fired フラグで二重発火は防止)。
+// ════════════════════════════════════════════════════════════════
+function ensureAudioReady(callback) {
+  var fired = false;
+  function fire(reason) {
+    if (fired) return;
+    fired = true;
+    dbg('ensureAudioReady → 発音実行 [' + reason + '] state=' + (AudioSystem.audioContext ? AudioSystem.audioContext.state : 'none'));
+    callback();
+  }
+  if (!started) {
+    dbg('ensureAudioReady: startInstrument()を呼び出し');
+    startInstrument();
+  }
+  var ctx = AudioSystem.audioContext;
+  if (!ctx) {
+    dbg('ensureAudioReady: audioContextが未生成、300msフォールバックへ');
+    setTimeout(function(){ fire('no-context-fallback-300ms'); }, 300);
+    return;
+  }
+  if (ctx.state === 'running') {
+    fire('already-running');
+    return;
+  }
+  dbg('ensureAudioReady: resume()待機開始 state=' + ctx.state);
+  ctx.resume().then(function(){ fire('resume-resolved'); }).catch(function(e){ dbg('ensureAudioReady: resume失敗: ' + e); });
+  // 保険: resume()のPromiseが解決しない/著しく遅い端末に備えたフォールバック
+  setTimeout(function(){ fire('timeout-fallback-400ms'); }, 400);
+}
+
 function startInstrument() {
   if (started) return;
+  dbg('startInstrument() 開始');
 
   // 1. AudioSystem初期化（AudioContext生成、sampleRate設定）
   AudioSystem.init();
+  dbg('AudioSystem.init() 完了 state=' + AudioSystem.audioContext.state + ' sampleRate=' + AudioSystem.audioContext.sampleRate);
   // ブラウザのAutoplay Policyでsuspendedになっている場合はresumeする
   if (AudioSystem.audioContext.state === 'suspended') {
-    AudioSystem.audioContext.resume();
+    AudioSystem.audioContext.resume().then(function(){
+      dbg('初回resume() 解決 state=' + AudioSystem.audioContext.state);
+    }).catch(function(e){ dbg('初回resume() 失敗: ' + e); });
   }
   // iOS Safari対策: 電話着信等での 'interrupted' 状態から自動的にresumeを試みる
-  AudioSystem.audioContext.addEventListener('statechange', function() {
-    var st = AudioSystem.audioContext.state;
-    if ((st === 'suspended' || st === 'interrupted') && !document.hidden) {
-      AudioSystem.audioContext.resume().catch(function(){});
-    }
-  });
+  // (一部のWebKitバージョンでAudioContextへのaddEventListenerが例外を
+  //  投げるケースに備え、try/catchで残りの初期化処理を止めないようにする)
+  try {
+    AudioSystem.audioContext.addEventListener('statechange', function() {
+      var st = AudioSystem.audioContext.state;
+      dbg('AudioContext statechange → ' + st);
+      if ((st === 'suspended' || st === 'interrupted') && !document.hidden) {
+        AudioSystem.audioContext.resume().catch(function(){});
+      }
+    });
+  } catch (e) {
+    dbg('statechangeリスナー登録に失敗(無視して続行): ' + e);
+  }
 
   // 2. doScriptProcessorをvolume付きでオーバーライド
   //    startSound()の直前に行うことで確実にオーバーライドされる
+  var _dscpFirstCallLogged = false;
   AudioSystem.doScriptProcessor = function(event) {
+    if (!_dscpFirstCallLogged) {
+      _dscpFirstCallLogged = true;
+      dbg('✅ doScriptProcessor 初回コールバック発火(音声グラフは実際に動作中) state=' + AudioSystem.audioContext.state);
+    }
     var inp1 = event.inputBuffer.getChannelData(0);
     var inp2 = event.inputBuffer.getChannelData(1);
     var out  = event.outputBuffer.getChannelData(0);
@@ -4242,6 +4407,7 @@ function startInstrument() {
   document.getElementById('sDot').classList.add('on');
   document.getElementById('bStart').classList.add('on');
   document.getElementById('bStart').textContent = '▶ ON';
+  dbg('startInstrument() 完了 state=' + AudioSystem.audioContext.state);
 
   // 7. 描画ループ
   requestAnimationFrame(drawLoop);
@@ -5228,8 +5394,7 @@ function buildPiano() {
     var n = +k.dataset.n;
     if (!started) {
       md = true;
-      startInstrument();
-      setTimeout(function(){ mouseDragNote = n; noteOn(n); }, 200);
+      ensureAudioReady(function(){ mouseDragNote = n; noteOn(n); });
       return;
     }
     md = true;
@@ -5264,7 +5429,6 @@ function buildPiano() {
   piano.addEventListener('touchstart', function(e) {
     e.preventDefault();
     var wasStarted = started;
-    if (!started) startInstrument();
     Array.from(e.changedTouches).forEach(function(t) {
       var el = document.elementFromPoint(t.clientX, t.clientY);
       var k = el && el.closest('[data-n]');
@@ -5278,13 +5442,12 @@ function buildPiano() {
         touchNoteMap[t.identifier] = n;
         noteOn(n);
       } else {
-        // iOS Safari対策: AudioContextの解錠(resume)は非同期のため、
-        // 起動直後のnoteOn呼び出しでは音が出ないことがある。
-        // mousedownハンドラと同じく200ms待ってから確実に鳴らす。
-        setTimeout(function() {
+        // iOS Safari対策: AudioContextが実際に'running'になった
+        // (またはタイムアウト保険が働いた)タイミングで確実に鳴らす。
+        ensureAudioReady(function() {
           touchNoteMap[t.identifier] = n;
           noteOn(n);
-        }, 200);
+        });
       }
     });
   }, {passive:false});
@@ -5342,7 +5505,7 @@ document.addEventListener('keydown', function(e) {
     e.preventDefault(); // ブラウザデフォルト動作(スクロール等)を防止
     heldKeys.add(k);
     var note = (octave+1)*12 + KM[k];
-    if (!started) { startInstrument(); setTimeout(function(){ noteOn(note); }, 200); }
+    if (!started) { ensureAudioReady(function(){ noteOn(note); }); }
     else noteOn(note);
   }
 });
@@ -7498,7 +7661,7 @@ function playMidiFile() {
     }
     midiScheduleTick();
   }
-  if (!started) { startInstrument(); setTimeout(go, 300); }
+  if (!started) { ensureAudioReady(go); }
   else go();
 }
 
