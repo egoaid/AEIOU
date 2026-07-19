@@ -1283,13 +1283,27 @@ window.addEventListener('unhandledrejection', function(e) {
   if (dbgPanelEl) dbgPanelEl.style.display = 'flex';
 });
 
+// ── DBGパネルの表示制御 ────────────────────────────────────────
+// 公開版では一般ユーザーに見せる必要がないため、デフォルトでは
+// パネル/トグルボタンを生成しない(ログ収集自体は常に継続する)。
+// URLに ?debug=1 を付けてアクセスすると有効化され、以後は
+// localStorageに記憶されるため毎回パラメータを付ける必要はない。
+// ?debug=0 でいつでも元(非表示)に戻せる。
+var DBG_ENABLED = (function() {
+  try {
+    if (location.search.indexOf('debug=1') !== -1) { localStorage.setItem('aeiouDebug', '1'); return true; }
+    if (location.search.indexOf('debug=0') !== -1) { localStorage.removeItem('aeiouDebug'); return false; }
+    return localStorage.getItem('aeiouDebug') === '1';
+  } catch (e) { return false; }
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
-  if (dbgPanelEl) return;
+  if (!DBG_ENABLED || dbgPanelEl) return;
   dbgInitPanel();
   dbg('ページ読み込み完了。UA=' + navigator.userAgent);
 });
 // DOMContentLoadedが既に発火済みの可能性(scriptがbody末尾にあるため)に備える
-if (document.readyState !== 'loading' && !dbgPanelEl) {
+if (DBG_ENABLED && document.readyState !== 'loading' && !dbgPanelEl) {
   dbgInitPanel();
   dbg('ページ読み込み完了(即時)。UA=' + navigator.userAgent);
 }
