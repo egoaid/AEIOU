@@ -1435,12 +1435,17 @@ document.addEventListener('visibilitychange', function() {
         AudioSystem.audioContext.suspend();
       }
     } catch (e) {}
+    if (typeof dbg === 'function') dbg('visibilitychange: hidden → suspend試行');
   } else {
-    // 復帰時: suspended/interrupted状態からの再開を試みる
+    // 復帰時: suspended/interrupted状態からの再開を試みる。
+    // iOS(WebKit)ではinterruptedのまま固まり resume() が二度と
+    // 解決しないケースがあるため、watchdogで継続的に再試行する。
+    if (typeof dbg === 'function') dbg('visibilitychange: visible復帰 state=' + (AudioSystem.audioContext ? AudioSystem.audioContext.state : 'none'));
     try {
       if (AudioSystem.audioContext &&
           (AudioSystem.audioContext.state === 'suspended' || AudioSystem.audioContext.state === 'interrupted')) {
-        AudioSystem.audioContext.resume();
+        AudioSystem.audioContext.resume().catch(function(){});
+        if (typeof startAudioWatchdog === 'function') startAudioWatchdog();
       }
     } catch (e) {}
   }
@@ -4131,20 +4136,97 @@ function allOff() {
 
 // ── Audio 起動 ───────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════
-//  ◈ iOS Safari対策: 固定ms待ちを廃止し、実際のAudioContext状態を
-//     根拠に発音するヘルパー
+//  ◈ iOS(WebKit)対策: AudioContextが'interrupted'のまま固まる
+//     既知の不具合への対応
 //
-//  これまでは「初回タッチ/クリック時はstartInstrument()を呼んで
-//  200ms待ってからnoteOn()する」という固定時間待ちだった。
-//  しかしiOSのAudioContext解錠(resume)にかかる時間は端末の負荷・
-//  電源状態・初回起動かどうかで変動するため、200msでは足りない
-//  ことがあり、これが「時々音が出ない」という不安定さの直接原因に
-//  なっていた。
+//  実機デバッグログにより判明した事実:
+//   - ホーム画面PWAを一度終了して再起動した直後など、AudioContextが
+//     生成された瞬間から'interrupted'状態のまま固まり、resume()の
+//     Promiseが二度と解決しないケースがある(iOS全ブラウザがWebKitを
+//     使うため、Safari/Chrome/Brave問わず同じ症状が出ることを確認済み)。
+//   - 一度でも「別のWebアプリ」等でOS側の共有オーディオセッションが
+//     有効化されると、その後このページに戻った際にresume()が通る
+//     ことがある → つまり「あきらめずに繰り返しresume()を試行し続け
+//     れば、いずれ復帰する可能性がある」ということ。
+//   - 一方で、以前のコードは初回の1回だけ試して失敗したら諦めて
+//     いた(2音目以降はensureAudioReadyすら通らない)ため、詰まったら
+//     ページを開き直すまで永久に無音のままだった。
 //
-//  このヘルパーは resume() のPromiseが解決するのを実際に待ってから
-//  発音する。Promiseが万一解決しない/遅い場合に備えて400msの
-//  タイムアウトも保険として設定し、確実にどちらか早い方で発音される
-//  ようにする(fired フラグで二重発火は防止)。
+//  この対策として、状態を継続的に監視して定期的にresume()を再試行し、
+//  数回失敗したらAudioContextごと閉じて音声グラフを丸ごと作り直す
+//  「ウォッチドッグ」を常駐させる。
+// ════════════════════════════════════════════════════════════════
+var audioWatchdogTimer   = null;
+var audioWatchdogTries   = 0;
+var drawLoopStarted      = false; // requestAnimationFrame(drawLoop)の多重起動防止
+
+function stopAudioWatchdog() {
+  if (audioWatchdogTimer) { clearInterval(audioWatchdogTimer); audioWatchdogTimer = null; }
+  audioWatchdogTries = 0;
+}
+
+function startAudioWatchdog() {
+  if (audioWatchdogTimer) return; // 既に監視中
+  dbg('🐕 audio watchdog 開始');
+  audioWatchdogTimer = setInterval(function() {
+    var ctx = AudioSystem.audioContext;
+    if (!ctx) return;
+    if (ctx.state === 'running') {
+      dbg('🐕 watchdog: state=running を確認、監視を停止');
+      stopAudioWatchdog();
+      return;
+    }
+    audioWatchdogTries++;
+    dbg('🐕 watchdog #' + audioWatchdogTries + ': state=' + ctx.state + ' → resume()再試行');
+    ctx.resume().catch(function(e){ dbg('🐕 watchdog resume失敗: ' + e); });
+    // 3回試しても復帰しない場合は、AudioContextごと作り直す
+    // (interruptedのまま固まる既知の不具合はresume()単体では治らないため)
+    if (audioWatchdogTries % 3 === 0) {
+      dbg('🐕 watchdog: ' + audioWatchdogTries + '回試行しても復帰せず。AudioContextを再生成します');
+      recreateAudioEngine();
+    }
+    // 長時間(約30回=約20秒)経っても復帰しない場合は監視を止めて無駄なループを防ぐ
+    // (次回ノート再生時にensureAudioReady経由で再度監視が始まる)
+    if (audioWatchdogTries >= 30) {
+      dbg('🐕 watchdog: 20秒経っても復帰せず。監視を一旦停止します');
+      stopAudioWatchdog();
+    }
+  }, 700);
+}
+
+// ── AudioContextを閉じて音声グラフ一式を作り直す ─────────────────
+// 'interrupted'に固まったAudioContextはresume()を呼び続けても
+// 復帰しないことがあるため、close()して新しいAudioContextから
+// 全ノード(ScriptProcessor・4Voice・ADT/Echoエフェクト等)を
+// 再構築する。startInstrument()自体が一式のセットアップを
+// 行う関数なので、started=falseに戻して呼び直すだけで良い。
+function recreateAudioEngine() {
+  var oldCtx = AudioSystem.audioContext;
+  function rebuild() {
+    started = false;
+    voices = [];
+    startInstrument();
+    dbg('♻️ recreateAudioEngine: 再構築完了 state=' + (AudioSystem.audioContext ? AudioSystem.audioContext.state : 'none'));
+  }
+  try {
+    if (AudioSystem.scriptProcessor) { try { AudioSystem.scriptProcessor.disconnect(); } catch(e){} }
+  } catch(e) {}
+  if (oldCtx && oldCtx.state !== 'closed') {
+    oldCtx.close().then(rebuild).catch(rebuild);
+  } else {
+    rebuild();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ◈ 固定ms待ちを廃止し、実際のAudioContext状態を根拠に発音するヘルパー
+//
+//  resume()のPromiseが解決するのを実際に待ってから発音する。
+//  Promiseが解決しない/遅い場合に備えて400msのタイムアウトも保険として
+//  設定し、どちらか早い方で発音を試みる(fired フラグで二重発火は防止)。
+//  さらに、400msたっても'running'にならない場合は、その場で諦めず
+//  audio watchdogを起動して裏で復旧を試み続ける(2音目以降が完全に
+//  無音のまま固定されてしまう問題への対策)。
 // ════════════════════════════════════════════════════════════════
 function ensureAudioReady(callback) {
   var fired = false;
@@ -4171,7 +4253,13 @@ function ensureAudioReady(callback) {
   dbg('ensureAudioReady: resume()待機開始 state=' + ctx.state);
   ctx.resume().then(function(){ fire('resume-resolved'); }).catch(function(e){ dbg('ensureAudioReady: resume失敗: ' + e); });
   // 保険: resume()のPromiseが解決しない/著しく遅い端末に備えたフォールバック
-  setTimeout(function(){ fire('timeout-fallback-400ms'); }, 400);
+  setTimeout(function(){
+    fire('timeout-fallback-400ms');
+    // 400ms経ってもrunningになっていない場合は、裏で復旧を試み続ける
+    if (AudioSystem.audioContext && AudioSystem.audioContext.state !== 'running') {
+      startAudioWatchdog();
+    }
+  }, 400);
 }
 
 function startInstrument() {
@@ -4196,6 +4284,7 @@ function startInstrument() {
       dbg('AudioContext statechange → ' + st);
       if ((st === 'suspended' || st === 'interrupted') && !document.hidden) {
         AudioSystem.audioContext.resume().catch(function(){});
+        startAudioWatchdog();
       }
     });
   } catch (e) {
@@ -4409,8 +4498,12 @@ function startInstrument() {
   document.getElementById('bStart').textContent = '▶ ON';
   dbg('startInstrument() 完了 state=' + AudioSystem.audioContext.state);
 
-  // 7. 描画ループ
-  requestAnimationFrame(drawLoop);
+  // 7. 描画ループ (recreateAudioEngine()でstartInstrument()が再度呼ばれても
+  //    描画ループ自体は多重に起動しないようにする)
+  if (!drawLoopStarted) {
+    drawLoopStarted = true;
+    requestAnimationFrame(drawLoop);
+  }
 
 }
 
