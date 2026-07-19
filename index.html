@@ -325,6 +325,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 <div class="hdr">
   <div class="logo"><span class="logo-ja">アエイオウ ❄</span>AEIOU<span class="logo-sub">Vocal Synthesizer Christmas Edition — v1.0</span></div>
   <div class="note-disp" id="noteDisp">---</div>
+  <div id="audioStartupBadge" style="display:none;font-size:9px;color:#fff;background:var(--danger);padding:2px 8px;border-radius:10px;font-weight:600;text-align:center;margin-top:2px;">🔈 音声準備中…</div>
   <div class="hinfo" style="display:flex;align-items:center;gap:10px;">
     <div style="text-align:right;">
       <div><span class="dot" id="sDot"></span><span id="midiLabel" style="font-size:10px;color:var(--dim);">MIDI —</span></div>
@@ -1208,6 +1209,19 @@ function dbgRender() {
   if (!dbgListEl) return;
   dbgListEl.textContent = DBG_LOG.join('\n');
   dbgListEl.scrollTop = dbgListEl.scrollHeight;
+}
+
+// ── 起動準備中バッジ ──────────────────────────────────────────────
+// AudioContextが実際に'running'になるまでの数百ms〜1秒程度の間、
+// 「押しても鳴らない」ことをユーザーが故障と誤解しないよう、
+// 画面上に準備中であることを明示する。
+function showAudioStartupBadge() {
+  var el = document.getElementById('audioStartupBadge');
+  if (el) el.style.display = 'block';
+}
+function hideAudioStartupBadge() {
+  var el = document.getElementById('audioStartupBadge');
+  if (el) el.style.display = 'none';
 }
 
 function dbgInitPanel() {
@@ -4168,11 +4182,13 @@ function stopAudioWatchdog() {
 function startAudioWatchdog() {
   if (audioWatchdogTimer) return; // 既に監視中
   dbg('🐕 audio watchdog 開始');
+  showAudioStartupBadge();
   audioWatchdogTimer = setInterval(function() {
     var ctx = AudioSystem.audioContext;
     if (!ctx) return;
     if (ctx.state === 'running') {
       dbg('🐕 watchdog: state=running を確認、監視を停止');
+      hideAudioStartupBadge();
       stopAudioWatchdog();
       return;
     }
@@ -4298,6 +4314,7 @@ function startInstrument() {
     if (!_dscpFirstCallLogged) {
       _dscpFirstCallLogged = true;
       dbg('✅ doScriptProcessor 初回コールバック発火(音声グラフは実際に動作中) state=' + AudioSystem.audioContext.state);
+      hideAudioStartupBadge();
     }
     var inp1 = event.inputBuffer.getChannelData(0);
     var inp2 = event.inputBuffer.getChannelData(1);
@@ -4497,6 +4514,11 @@ function startInstrument() {
   document.getElementById('bStart').classList.add('on');
   document.getElementById('bStart').textContent = '▶ ON';
   dbg('startInstrument() 完了 state=' + AudioSystem.audioContext.state);
+  if (AudioSystem.audioContext.state !== 'running') {
+    showAudioStartupBadge();
+  } else {
+    hideAudioStartupBadge();
+  }
 
   // 7. 描画ループ (recreateAudioEngine()でstartInstrument()が再度呼ばれても
   //    描画ループ自体は多重に起動しないようにする)
@@ -5403,6 +5425,7 @@ function drawLoop() {
 
 // ── XY パッド入力 ────────────────────────────────────────────────
 var xyDragging = false;
+var xyTouchId  = null; // このXYパッドが担当しているタッチのidentifier(マルチタッチ対応)
 
 function xyFromEvent(cx, cy) {
   var rect = tractCanvas.getBoundingClientRect();
@@ -5435,17 +5458,37 @@ document.addEventListener('mouseup', function() { xyDragging = false; });
 tractCanvas.addEventListener('touchstart', function(e) {
   e.preventDefault();
   if (!started) { startInstrument(); return; }
+  // ── マルチタッチ対応 ──────────────────────────────────────────
+  // e.touches[0] は「画面上で現在押されている全タッチのうち最初のもの」を
+  // 指すため、右手で鍵盤を押しながら左手でこのパッドに触れた場合、
+  // touches[0]が鍵盤側の指を指してしまいパッドが正しく反応しなかった。
+  // このパッド自身が担当する指のidentifierを記録し、以後はそれだけを
+  // 追跡することで、他の要素へのタッチと混ざらないようにする。
+  var t = e.changedTouches[0];
+  xyTouchId = t.identifier;
   xyDragging = true;
-  xyFromEvent(e.touches[0].clientX, e.touches[0].clientY);
+  xyFromEvent(t.clientX, t.clientY);
 }, {passive:false});
 tractCanvas.addEventListener('touchmove', function(e) {
   e.preventDefault();
   if (!xyDragging || !started) return;
-  xyFromEvent(e.touches[0].clientX, e.touches[0].clientY);
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    var t = e.changedTouches[i];
+    if (t.identifier === xyTouchId) { xyFromEvent(t.clientX, t.clientY); break; }
+  }
 }, {passive:false});
-tractCanvas.addEventListener('touchend', function(e) {
-  e.preventDefault(); xyDragging = false;
-}, {passive:false});
+function endXYTouch(e) {
+  e.preventDefault();
+  for (var i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === xyTouchId) {
+      xyDragging = false;
+      xyTouchId = null;
+      break;
+    }
+  }
+}
+tractCanvas.addEventListener('touchend', endXYTouch, {passive:false});
+tractCanvas.addEventListener('touchcancel', endXYTouch, {passive:false});
 
 // ── ピアノ ───────────────────────────────────────────────────────
 // ── iOS Safari対策: touch identifier → note のマップをグローバルに
