@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>❄ AEIOU v1.0 — Vocal Synthesizer Christmas Edition</title>
+<title>❄ AEIOU v1.2 — Vocal Synthesizer Christmas Edition</title>
 
 <!-- ═══════════ SEO ═══════════ -->
 <meta name="description" content="AEIOU is a free, browser-based singing snowman synthesizer for Christmas. Built on a physically-modeled vocal-tract engine (Pink Trombone), it sings from a MIDI/PC keyboard or plays MIDI files as an automatic SATB choir. Songs and videos you create with it are free to use commercially.">
@@ -59,7 +59,7 @@
   "applicationCategory": "MusicApplication",
   "operatingSystem": "Any modern web browser",
   "browserRequirements": "Requires JavaScript and Web Audio API support",
-  "softwareVersion": "1.0",
+  "softwareVersion": "1.2",
   "inLanguage": ["ja", "en"],
   "isAccessibleForFree": true,
   "offers": {
@@ -323,7 +323,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 </head>
 <body>
 <div class="hdr">
-  <div class="logo"><span class="logo-ja">アエイオウ ❄</span>AEIOU<span class="logo-sub">Vocal Synthesizer Christmas Edition — v1.0</span></div>
+  <div class="logo"><span class="logo-ja">アエイオウ ❄</span>AEIOU<span class="logo-sub">Vocal Synthesizer Christmas Edition — v1.2</span></div>
   <div class="note-disp" id="noteDisp">---</div>
   <div id="audioStartupBadge" style="display:none;font-size:9px;color:#fff;background:var(--danger);padding:2px 8px;border-radius:10px;font-weight:600;text-align:center;margin-top:2px;">🔈 音声準備中…</div>
   <div class="hinfo" style="display:flex;align-items:center;gap:10px;">
@@ -342,6 +342,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
   <button class="btn" id="btnPresetLoad" style="font-size:10px;padding:4px 10px;">LOAD</button>
   <button class="btn" id="btnPresetSave" style="font-size:10px;padding:4px 10px;">SAVE</button>
   <button class="btn" id="btnPresetReset" style="font-size:10px;padding:4px 10px;">RESET</button>
+  <button class="btn" id="btnRandomize" style="font-size:10px;padding:4px 10px;color:var(--accent);border-color:var(--accent);" title="声色・エフェクトの全パラメーターをランダム生成">🎲 RANDOMIZE</button>
   <button class="btn" id="btnPresetDelete" style="font-size:10px;padding:4px 10px;color:var(--danger);border-color:var(--danger);display:none;" title="ユーザープリセットを削除">DELETE</button>
   <button class="btn" id="btnPresetExport" style="font-size:10px;padding:4px 10px;" title="ユーザープリセットをJSONで書き出し">JSON OUT</button>
   <label class="btn" style="font-size:10px;padding:4px 10px;cursor:pointer;" title="JSONファイルからユーザープリセットを読み込み">JSON IN
@@ -617,6 +618,33 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           <input type="range" id="sEchoFb" min="0" max="80" value="30">
           <span class="sv" id="vEchoFb">30%</span></div>
     </div>
+      <div class="panel">
+        <div class="pt desc" data-ja="◈ EXTERNAL AUDIO SYNC (外部オーディオ)" data-en="◈ EXTERNAL AUDIO SYNC"></div>
+        <div class="desc" style="font-size:9px;color:var(--sub);margin-bottom:8px;line-height:1.6;" data-ja="外部の音声ファイルを読み込み、通常のプレーヤーとして再生できます(AEIOUの演奏と同時再生も可能)。この音は録音(WAV)には一切含まれません。さらに「REC時に自動再生」をONにすると、REC開始と全く同じタイミングで頭から再生され、他のシンセ/ドラムマシーンWEBアプリの書き出し音源とテンポを揃えるのに使えます。" data-en="Load an external audio file and play it back like a normal player (can play together with AEIOU). This audio is never included in the recorded WAV. With 'Auto-play on REC' enabled, it also restarts from the beginning at the exact moment REC starts, to keep tempo aligned with audio exported from another synth/drum-machine web app."></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+          <label class="btn" style="cursor:pointer;font-size:10px;padding:5px 11px;">
+            <span id="extAudioLabel">ファイルを選択</span>
+            <input type="file" id="extAudioFileInput" accept="audio/*" style="display:none;">
+          </label>
+          <span id="extAudioFileName" style="font-size:10px;color:var(--sub);">未選択</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;flex-wrap:wrap;">
+          <button class="btn" id="extAudioPlayBtn">▶ PLAY</button>
+          <button class="btn" id="extAudioStopBtn">■ STOP</button>
+          <span id="extAudioTimeLabel" style="font-size:10px;color:var(--accent);margin-left:4px;">0:00 / 0:00</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:8px;">
+          <div id="extAudioProgressBar" style="height:100%;width:0%;background:var(--accent);transition:width 0.1s linear;"></div>
+        </div>
+        <div class="tw">
+          <label class="tog"><input type="checkbox" id="chkExtAudioEnabled" checked><div class="ts"></div></label>
+          <span class="tl desc" data-ja="REC時に自動再生する(頭出しして同期)" data-en="Auto-play on REC (restarts from 0, synced)"></span>
+        </div>
+        <div class="sr"><span class="sl">VOLUME</span>
+          <input type="range" id="sExtAudioVol" min="0" max="150" value="80">
+          <span class="sv" id="vExtAudioVol">80%</span></div>
+        <div class="desc" style="font-size:9px;color:var(--sub);" data-ja="モニター音量のみ調整(録音には影響しません)" data-en="Adjusts monitor volume only (does not affect the recording)"></div>
+    </div>
       <div class="panel" id="lfResearchPanel" style="display:none;">
         <div class="pt">◈ LF GLOTTIS RESEARCH</div>
         <div class="desc" style="font-size:9px;color:var(--sub);margin-bottom:7px;" data-ja="声帯振動(LF)モデルのパラメータ探索専用 — プリセットなし、聴感評価専用" data-en="LF glottal model parameter research — no presets, listening evaluation only"></div>
@@ -826,7 +854,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 </div>
 <div class="credit" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
   <div>
-    ❄ Pink Trombone vocal engine © 2017 Neil Thapen (MIT License) · Christmas Edition v1.0 ❄
+    ❄ Pink Trombone vocal engine © 2017 Neil Thapen (MIT License) · Christmas Edition v1.2 ❄
     &nbsp;|&nbsp;
     Additional features © Takeshi Kawamoto — All rights reserved (no copying, redistribution, or modification) · <a href="https://github.com/egoaid/AEIOU" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">github.com/egoaid/AEIOU</a>
   </div>
@@ -853,7 +881,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
       <!-- ═══════════ 日本語版 ═══════════ -->
       <div id="manualContentJa">
         <div class="manual-title">AEIOU Vocal Synthesizer — 取扱説明書</div>
-        <div class="manual-sub">Christmas Edition v1.0 ／ Pink Trombone LF声道モデルによる物理モデリング歌声シンセサイザー</div>
+        <div class="manual-sub">Christmas Edition v1.2 ／ Pink Trombone LF声道モデルによる物理モデリング歌声シンセサイザー</div>
 
         <div class="manual-p">
           AEIOUは、Neil Thapen氏の <span class="manual-k">Pink Trombone</span>(声帯振動と声道共鳴を物理的にシミュレートするエンジン)を核に、
@@ -953,7 +981,20 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           <li>プレイリストは複数曲を並べてLOOP再生できます。再生中に別の曲をクリックすると、まず現在の音を止めて0.5秒の無音を挟んでから選択した曲を再生します(前の曲の音が重なって残るのを防ぐため)。</li>
         </ul>
 
-        <div class="manual-sec">10. プリセット</div>
+        <div class="manual-sec">10. EXTERNAL AUDIO SYNC(外部オーディオ同期再生)</div>
+        <div class="manual-p">
+          他のシンセ/ドラムマシーンWEBアプリなどで書き出した音源ファイルを読み込み、AEIOUの演奏や録音とテンポを揃えるための機能です。
+          「◈ VOICE PARAMETERS」パネルの下にある「◈ EXTERNAL AUDIO SYNC」パネルから操作します。
+        </div>
+        <ul class="manual-list">
+          <li><span class="manual-k">ファイルを選択:</span> mp3/wav等の音声ファイルを読み込みます。</li>
+          <li><span class="manual-k">▶ PLAY / ⏸ PAUSE / ■ STOP:</span> 標準的な音楽プレーヤーとして単独で再生・一時停止・停止ができます。AEIOUの鍵盤演奏やMIDIファイル再生と同時に鳴らすことも可能です。進捗バーと経過時間/総時間の表示で、あとどれくらい残っているか一目でわかります。</li>
+          <li><span class="manual-k">REC時に自動再生する:</span> ONの状態で <span class="manual-k">⏺ REC</span> を押すと、録音開始と全く同じタイミングで外部ファイルが(通常再生の位置に関わらず)必ず先頭から再生されます。</li>
+          <li><span class="manual-k">重要:</span> この外部ファイルの音はスピーカーには出力されますが、AEIOUの録音(WAV書き出し)には一切含まれません。書き出されたWAVを外部ファイルと同じDAWプロジェクトに読み込めば、頭出しのタイミングが揃います(=テンポが同期した状態で編集できます)。</li>
+          <li><span class="manual-k">VOLUME:</span> モニター(スピーカー出力)の音量のみを調整します。録音内容には影響しません。</li>
+        </ul>
+
+        <div class="manual-sec">11. プリセット</div>
         <div class="manual-p">
           ヘッダー下のプリセットバーから、合唱団・ソロボイス・雰囲気・キャラクターなど29種類の組み込みプリセットを呼び出せます。
           <span class="manual-k">LOAD</span> で選択中のプリセットを適用、<span class="manual-k">SAVE</span> で現在の全設定に名前を付けてブラウザに保存、
@@ -961,20 +1002,29 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           <span class="manual-k">JSON OUT / JSON IN</span> で、保存したユーザープリセットをファイルとして書き出し・読み込みできるので、
           他のブラウザ/PCへ持ち運ぶことも可能です。
         </div>
+        <div class="manual-p">
+          <span class="manual-k">🎲 RANDOMIZE</span> ボタンを押すと、声とエフェクトに関わるほぼ全パラメーターを一度にランダム生成します
+          — TENS/WOBBLE/RAWNESSなどの声質パラメーター、LEGATO・AUTO BREATH・CONSONANT ATTACK、HARMONY(SOLO/POLY)、
+          VOICE CHARACTER(V2〜V4)、HUMANIZE、ADT & STEREO ECHO、VOICE DNA(V1〜V4個体差)、オクターブ、母音まで、
+          「◈ EXTERNAL AUDIO SYNC」を除くほぼ全てが対象です(LF GLOTTIS RESEARCHパネルなど一部の実験的機能は、
+          破綻したノイズを避けるため対象外です)。各パラメーターは完全な一様乱数ではなく、実際のプリセット群に近い
+          実用的な範囲でランダム化されるため、「聴ける音」と「予想もしない意外な声」のバランスを取ってあります。
+          気に入った偶然の産物は <span class="manual-k">SAVE</span> でユーザープリセットとして保存できます。
+        </div>
 
-        <div class="manual-sec">11. 画面表示</div>
+        <div class="manual-sec">12. 画面表示</div>
         <div class="manual-p">
           雪だるまの劇場は発声に合わせて口の形・頬の赤み・音符アニメーションなどが変化します。右上の <span class="manual-k">⛶</span> ボタンで
           全画面表示に切り替えられ、パーティー会場のスクリーンに映すのに向いています。
         </div>
 
-        <div class="manual-sec">12. 言語切替 / 取扱説明書</div>
+        <div class="manual-sec">13. 言語切替 / 取扱説明書</div>
         <div class="manual-p">
           ヘッダー右上の <span class="manual-k">JP / EN</span> ボタンでUI全体の表示言語を切り替えられます。この取扱説明書も、
           モーダル右上の JP / EN ボタン(またはメインの言語切替と連動)で日本語・英語を切り替え可能です。
         </div>
 
-        <div class="manual-sec">13. 仕様</div>
+        <div class="manual-sec">14. 仕様</div>
         <table class="manual-spec">
           <tr><th>音声エンジン</th><td>Pink Trombone (Neil Thapen, 2017) — LF (Liljencrants-Fant) 声帯振動モデル + 声道導波管(waveguide)モデルによる物理モデリング歌声合成。tenseness → Rd → Ra/Rk/Rg の結合式で声質を制御。</td></tr>
           <tr><th>ポリフォニー</th><td>最大4声(独立したGlottis+Tractのペアを4基搭載)。SOLOは1声、POLYは最大4声同時発音。MIDIファイル再生時はSATB(V1〜V4)として使用。</td></tr>
@@ -993,7 +1043,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
       <!-- ═══════════ English Version ═══════════ -->
       <div id="manualContentEn" style="display:none;">
         <div class="manual-title">AEIOU Vocal Synthesizer — User Manual</div>
-        <div class="manual-sub">Christmas Edition v1.0 / A physically-modeled singing voice synthesizer built on the Pink Trombone LF vocal-tract model</div>
+        <div class="manual-sub">Christmas Edition v1.2 / A physically-modeled singing voice synthesizer built on the Pink Trombone LF vocal-tract model</div>
 
         <div class="manual-p">
           AEIOU is built around Neil Thapen's <span class="manual-k">Pink Trombone</span> engine — a physical simulation of the glottis and
@@ -1105,7 +1155,25 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
             waits 0.5 seconds of silence before starting the newly selected song, so the previous song's tail never overlaps the next one.</li>
         </ul>
 
-        <div class="manual-sec">10. Presets</div>
+        <div class="manual-sec">10. External Audio Sync</div>
+        <div class="manual-p">
+          Loads an audio file exported from another synth/drum-machine web app and keeps it aligned in tempo with your AEIOU performance or
+          recording. Controlled from the "◈ EXTERNAL AUDIO SYNC" panel, located below the "◈ VOICE PARAMETERS" panel.
+        </div>
+        <ul class="manual-list">
+          <li><span class="manual-k">Choose File:</span> loads an mp3/wav/etc. audio file.</li>
+          <li><span class="manual-k">▶ PLAY / ⏸ PAUSE / ■ STOP:</span> a standard music-player transport — play, pause, and stop the file on
+            its own. It can also play at the same time as AEIOU's keyboard performance or MIDI file playback. A progress bar plus elapsed/total
+            time display shows at a glance how much is left.</li>
+          <li><span class="manual-k">Auto-play on REC:</span> when enabled, pressing <span class="manual-k">⏺ REC</span> always starts the
+            external file from the beginning (regardless of its current playback position) at the exact same moment recording starts.</li>
+          <li><span class="manual-k">Important:</span> this external audio is heard through your speakers but is never included in AEIOU's
+            recording (WAV export). Import the exported WAV into the same DAW project as the external file and the start points will line up
+            (i.e. you can edit with tempo already synced).</li>
+          <li><span class="manual-k">VOLUME:</span> adjusts monitor (speaker) volume only — it has no effect on the recording.</li>
+        </ul>
+
+        <div class="manual-sec">11. Presets</div>
         <div class="manual-p">
           The preset bar below the header offers 29 built-in presets spanning choirs, solo voices, atmospheric textures, and character voices.
           <span class="manual-k">LOAD</span> applies the selected preset, <span class="manual-k">SAVE</span> stores all current settings under a
@@ -1113,20 +1181,29 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           removes a saved user preset. <span class="manual-k">JSON OUT / JSON IN</span> let you export/import your saved user presets as a file,
           so you can carry them to another browser or computer.
         </div>
+        <div class="manual-p">
+          The <span class="manual-k">🎲 RANDOMIZE</span> button generates new random values for almost every parameter that shapes the voice
+          and effects at once — voice-quality parameters like TENS/WOBBLE/RAWNESS, LEGATO, AUTO BREATH, CONSONANT ATTACK, HARMONY (SOLO/POLY),
+          VOICE CHARACTER (V2–V4), HUMANIZE, ADT & STEREO ECHO, VOICE DNA (V1–V4 individual differences), octave, and the current vowel are all
+          included (aside from EXTERNAL AUDIO SYNC). A few experimental features, such as the LF GLOTTIS RESEARCH panel, are intentionally left
+          untouched to avoid producing broken, unusable noise. Each parameter is randomized within a practical range close to what's actually
+          used across the built-in presets — not a fully uniform random draw — striking a balance between "still listenable" and "genuinely
+          unexpected." If you land on a happy accident, use <span class="manual-k">SAVE</span> to keep it as a user preset.
+        </div>
 
-        <div class="manual-sec">11. Display</div>
+        <div class="manual-sec">12. Display</div>
         <div class="manual-p">
           The snowman's stage animates its mouth shape, cheek blush, and floating musical notes in sync with the voice. The
           <span class="manual-k">⛶</span> button at the top right toggles fullscreen — handy for projecting onto a party screen.
         </div>
 
-        <div class="manual-sec">12. Language Switch / This Manual</div>
+        <div class="manual-sec">13. Language Switch / This Manual</div>
         <div class="manual-p">
           The <span class="manual-k">JP / EN</span> buttons in the header switch the entire UI's display language. This manual can likewise be
           switched between Japanese and English using the JP / EN buttons at the top of this window (kept in sync with the main language toggle).
         </div>
 
-        <div class="manual-sec">13. Specifications</div>
+        <div class="manual-sec">14. Specifications</div>
         <table class="manual-spec">
           <tr><th>Voice engine</th><td>Pink Trombone (Neil Thapen, 2017) — physically-modeled singing voice synthesis combining an LF
             (Liljencrants-Fant) glottal source model with a waveguide vocal-tract model. Voice quality is driven by the tenseness → Rd → Ra/Rk/Rg coupling.</td></tr>
@@ -3479,6 +3556,40 @@ var isRecording   = false;
 var recStartTime  = 0;
 var recTimerID    = null;
 
+// ════════════════════════════════════════════════════════════════
+//  ◈ EXTERNAL AUDIO SYNC (外部オーディオファイルの同期再生)
+//  他のシンセ/ドラムマシーンWEBアプリで書き出した音源とテンポを
+//  合わせるための機能。REC開始と全く同じタイミングで外部ファイルの
+//  再生を開始する。ただし外部ファイルは recDest(録音対象)には一切
+//  接続しない — AudioContext.destination(スピーカー)にのみ繋ぐため、
+//  「耳には聞こえるが録音されるWAVにはAEIOUの声しか入らない」状態になる。
+//  録音後、そのWAVを外部ファイルと同じDAWプロジェクトに読み込ませれば
+//  頭出しのタイミングが揃う(=テンポが同期する)という仕組み。
+// ════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════
+//  ◈ EXTERNAL AUDIO SYNC (外部オーディオファイルの再生プレーヤー)
+//  他のシンセ/ドラムマシーンWEBアプリで書き出した音源を、通常の
+//  音楽プレーヤーとして再生できる(AEIOU演奏との同時再生も可能)。
+//  さらに録音(REC)開始と全く同じタイミングで頭から再生を始めることで
+//  テンポを同期させることもできる(=extAudioSyncEnabled)。
+//  いずれの再生も extAudioGainNode(destinationのみ接続)を経由するため、
+//  「耳には聞こえるが録音(WAV)にはAEIOUの声しか入らない」状態になる。
+// ════════════════════════════════════════════════════════════════
+var extAudioBuffer      = null;  // decodeAudioData済みのAudioBuffer
+var extAudioGainNode    = null;  // モニター専用出力(destinationのみ。recDestには非接続)
+var extAudioVolume      = 0.8;
+var extAudioSyncEnabled = true;  // REC時に頭出しして自動再生するか
+var extAudioFileLabel   = '';    // 読み込んだファイル名(表示用)
+// 通常再生プレーヤーの状態 (AudioBufferSourceNodeはpause不可のため、
+// 停止時にoffset(秒)を覚えておいて次回再生時にstart(0, offset)で再開する)
+var extPlayer = {
+  source      : null,   // 再生中のAudioBufferSourceNode(nullなら停止中)
+  playing     : false,
+  startCtxTime: 0,       // このAudioContext時刻を基準に「再生開始からの経過」を計算
+  pauseOffset : 0,       // 一時停止/停止時点での再生位置(秒)
+  rafId       : null,
+};
+
 // ── ピッチホイール → loudness乗数 ───────────────────────────
 // センター(8192)=×1.0, 最下(0)=×0.0 (下げのみ有効)
 var pitchWheelRaw      = 8192;
@@ -4482,6 +4593,13 @@ function startInstrument() {
   // 録音用 MediaStreamDestination
   recDest = ac.createMediaStreamDestination();
   limiter.connect(recDest);
+
+  // ── 外部オーディオ同期再生: モニター専用チェーン ────────────────
+  // destination(スピーカー)にのみ接続し、recDest(録音対象)には
+  // 絶対に繋がない。これにより「耳には聞こえるが録音には入らない」。
+  extAudioGainNode = ac.createGain();
+  extAudioGainNode.gain.value = extAudioVolume;
+  extAudioGainNode.connect(ac.destination);
 
   // Dry: L/R両チャンネルに直接
   var dryGain = ac.createGain();
@@ -5967,7 +6085,11 @@ document.getElementById('bRec').addEventListener('click', function() {
     mediaRecorder = new MediaRecorder(recDest.stream, mime ? {mimeType: mime} : {});
     mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) recChunks.push(e.data); };
     mediaRecorder.onstop = exportWAV;
+    // ── 録音開始と外部オーディオ再生を同一タイミングで発火 ────────
+    // 両方とも同じAudioContextのクロックに乗って進行するため、
+    // 一度開始すればズレが蓄積(ドリフト)することはない。
     mediaRecorder.start();
+    startExtAudioPlayback();
     isRecording = true;
     document.getElementById('bRec').textContent = '⏹ STOP';
     document.getElementById('bRec').style.background = 'var(--danger)';
@@ -5982,6 +6104,7 @@ document.getElementById('bRec').addEventListener('click', function() {
   } else {
     // 録音停止
     mediaRecorder.stop();
+    stopExtAudioPlayback();
     isRecording = false;
     clearInterval(recTimerID);
     document.getElementById('bRec').textContent = '⏺ REC';
@@ -6055,6 +6178,182 @@ function audioBufferToWav(buffer) {
   }
   return ab;
 }
+
+// ════════════════════════════════════════════════════════════════
+//  ◈ EXTERNAL AUDIO SYNC — 実装本体
+//  通常の音楽プレーヤーとしての再生(PLAY/PAUSE/STOP)と、
+//  録音(REC)開始と同時に頭出しして再生する同期モードの、両方を
+//  同じextPlayerで扱う。いずれもextAudioGainNode(destinationのみ
+//  接続)を経由するため、耳には聞こえるが録音対象(recDest)には
+//  一切含まれない。
+//
+//  AudioBufferSourceNodeは仕様上「一度stop()したら再利用不可・
+//  pauseもない」ため、停止/一時停止のたびに新しいノードを作り直し、
+//  再生位置(pauseOffset)だけを引き継ぐ方式にしている。
+// ════════════════════════════════════════════════════════════════
+
+// 現在のソースだけを止める(状態フラグ類には触れない、内部ヘルパー)
+function extPlayerStopSourceOnly() {
+  if (extPlayer.source) {
+    extPlayer.source.onended = null; // 手動停止時は自然終了扱いにしない
+    try { extPlayer.source.stop(); } catch(e){}
+    try { extPlayer.source.disconnect(); } catch(e){}
+    extPlayer.source = null;
+  }
+  if (extPlayer.rafId) { cancelAnimationFrame(extPlayer.rafId); extPlayer.rafId = null; }
+}
+
+// offsetSeconds省略時は現在のpauseOffsetから再開(=通常のPLAYボタン)
+// offsetSeconds=0を明示すると常に頭から(=REC同期モード)
+function extPlayerPlay(offsetSeconds) {
+  if (!extAudioBuffer || !extAudioGainNode) return;
+  var ac = AudioSystem.audioContext;
+  if (!ac) return;
+  extPlayerStopSourceOnly();
+
+  var offset = (offsetSeconds !== undefined) ? offsetSeconds : extPlayer.pauseOffset;
+  if (offset >= extAudioBuffer.duration || offset < 0) offset = 0;
+
+  var src = ac.createBufferSource();
+  src.buffer = extAudioBuffer;
+  src.connect(extAudioGainNode);
+  src.onended = function() {
+    // 曲の終端まで自然に再生し終えた場合のみここに来る
+    // (手動stop/pauseはonended=nullにしてから呼ぶので発火しない)
+    extPlayer.source      = null;
+    extPlayer.playing     = false;
+    extPlayer.pauseOffset = 0;
+    if (extPlayer.rafId) { cancelAnimationFrame(extPlayer.rafId); extPlayer.rafId = null; }
+    updateExtPlayerUI(0);
+  };
+  src.start(0, offset);
+
+  extPlayer.source       = src;
+  extPlayer.playing      = true;
+  extPlayer.pauseOffset  = offset;
+  extPlayer.startCtxTime = ac.currentTime - offset;
+  extPlayerRAFLoop();
+}
+
+// 一時停止: 現在位置を覚えて止める(次のPLAYで続きから再開)
+function extPlayerPause() {
+  if (!extPlayer.playing) return;
+  var ac = AudioSystem.audioContext;
+  extPlayer.pauseOffset = ac ? Math.max(0, ac.currentTime - extPlayer.startCtxTime) : extPlayer.pauseOffset;
+  extPlayerStopSourceOnly();
+  extPlayer.playing = false;
+  updateExtPlayerUI(extPlayer.pauseOffset);
+}
+
+// 完全停止: 位置を0に戻す
+function extPlayerStop() {
+  extPlayerStopSourceOnly();
+  extPlayer.playing     = false;
+  extPlayer.pauseOffset = 0;
+  updateExtPlayerUI(0);
+}
+
+// REC開始時に呼ばれる: 現在の再生状態に関わらず常に頭から再同期する
+function startExtAudioPlayback() {
+  if (!extAudioSyncEnabled || !extAudioBuffer || !extAudioGainNode) return;
+  extPlayerPlay(0);
+  dbg('🎧 external audio sync playback 開始(頭出し)');
+}
+// REC停止時に呼ばれる: 同期再生も一緒に止める
+function stopExtAudioPlayback() {
+  if (extAudioSyncEnabled) extPlayerStop();
+}
+
+// 再生中は毎フレーム進捗を更新する
+function extPlayerRAFLoop() {
+  function tick() {
+    if (!extPlayer.playing) return;
+    var ac = AudioSystem.audioContext;
+    var cur = ac ? (ac.currentTime - extPlayer.startCtxTime) : 0;
+    if (extAudioBuffer) cur = Math.min(cur, extAudioBuffer.duration);
+    updateExtPlayerUI(cur);
+    extPlayer.rafId = requestAnimationFrame(tick);
+  }
+  extPlayer.rafId = requestAnimationFrame(tick);
+}
+
+// PLAY/PAUSEボタン・時間表示・プログレスバーをまとめて更新
+function updateExtPlayerUI(curSeconds) {
+  var btn = document.getElementById('extAudioPlayBtn');
+  if (btn) btn.textContent = extPlayer.playing ? '⏸ PAUSE' : '▶ PLAY';
+  var dur = extAudioBuffer ? extAudioBuffer.duration : 0;
+  var label = document.getElementById('extAudioTimeLabel');
+  if (label) label.textContent = fmtTime(curSeconds) + ' / ' + fmtTime(dur);
+  var bar = document.getElementById('extAudioProgressBar');
+  if (bar) bar.style.width = (dur > 0 ? Math.min(100, curSeconds / dur * 100) : 0) + '%';
+}
+
+function updateExtAudioStatus() {
+  var el = document.getElementById('extAudioFileName');
+  if (!el) return;
+  el.textContent = extAudioFileLabel || (currentLang === 'en' ? 'No file selected' : '未選択');
+}
+
+document.getElementById('extAudioFileInput').addEventListener('change', function(e) {
+  var f = e.target.files[0]; if (!f) return;
+  // 新しいファイルに切り替える前に、再生中なら止めて状態をリセット
+  extPlayerStop();
+  extAudioBuffer    = null;
+  extAudioFileLabel = f.name;
+  updateExtAudioStatus();
+  updateExtPlayerUI(0);
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    // startInstrument()前でもデコードできるよう、AudioContextが
+    // 未生成ならここで一時的に生成する(exportWAVと同じ考え方)。
+    var decodeCtx = (typeof AudioSystem !== 'undefined' && AudioSystem.audioContext)
+      ? AudioSystem.audioContext
+      : new (window.AudioContext || window.webkitAudioContext)();
+    decodeCtx.decodeAudioData(ev.target.result, function(buf) {
+      extAudioBuffer = buf;
+      updateExtAudioStatus();
+      updateExtPlayerUI(0);
+      dbg('🎧 external audio decoded: ' + f.name + ' ' + buf.duration.toFixed(2) + 's');
+    }, function(err) {
+      alert((currentLang === 'en' ? 'Failed to load audio file: ' : '音声ファイルを読み込めませんでした: ') + err);
+      extAudioFileLabel = '';
+      updateExtAudioStatus();
+    });
+  };
+  reader.readAsArrayBuffer(f);
+  e.target.value = '';
+});
+
+document.getElementById('chkExtAudioEnabled').addEventListener('change', function() {
+  extAudioSyncEnabled = this.checked;
+});
+
+document.getElementById('sExtAudioVol').addEventListener('input', function() {
+  var v = +this.value;
+  extAudioVolume = v / 100;
+  document.getElementById('vExtAudioVol').textContent = v + '%';
+  if (extAudioGainNode) {
+    extAudioGainNode.gain.setTargetAtTime(extAudioVolume, AudioSystem.audioContext.currentTime, 0.02);
+  }
+});
+
+// ── PLAY/PAUSE・STOPボタン (通常の音楽プレーヤーとしての操作) ────
+// AEIOUの演奏(鍵盤/MIDI)と完全に独立して動くため、同時再生も可能。
+document.getElementById('extAudioPlayBtn').addEventListener('click', function() {
+  if (!extAudioBuffer) {
+    alert(currentLang === 'en' ? 'Please choose an audio file first' : '先に音声ファイルを選択してください');
+    return;
+  }
+  function toggle() {
+    if (extPlayer.playing) extPlayerPause();
+    else extPlayerPlay();
+  }
+  if (!started) { ensureAudioReady(toggle); }
+  else toggle();
+});
+document.getElementById('extAudioStopBtn').addEventListener('click', function() {
+  extPlayerStop();
+});
 
 // ── Consonant Attack コントロール ────────────────────────────────
 function updateConsSliders(type) {
@@ -6921,6 +7220,124 @@ function showPresetStatus(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(function(){ el.textContent=''; }, 1500);
 }
+
+// ════════════════════════════════════════════════════════════════
+//  ◈ RANDOMIZE — 声の生成に関わる全パラメーター + エフェクトの
+//     ランダム生成。「予想もしない声」「美しい声」の両方が出るよう、
+//     完全な一様乱数(0〜スライダー最大値)ではなく、各パラメーターの
+//     実用的なレンジ(=PRESETS群で実際に使われている範囲に近い帯域)
+//     の中でランダム化する。範囲を絞りすぎると毎回似た声になり、
+//     広げすぎると常に破綻した音になるため、両者のバランスを取った
+//     手動チューニング値。
+//
+//  実装方針: 既存の getState()/setState() が扱うのと全く同じ
+//  「プリセット状態オブジェクト」を乱数で組み立て、setState()に
+//  渡すだけ。UIへの反映・エンジンへの反映(voiceCharacter/VOICE_DNA/
+//  ADT・Echoノード等)はsetState()側の既存ロジックにそのまま乗るため、
+//  二重実装を避けられる。
+//
+//  対象外(意図的に除外):
+//   - LF GLOTTIS RESEARCH パネル(実験用の隠しパネル。ここが荒れると
+//     破綻したノイズになりかねないため、常に安全な'original'モードの
+//     ままにしておく。setState()もこのパネルには触れない設計)
+//   - VOICE AUDITION選択(A/B比較用のUI状態であり「声」そのものの
+//     パラメーターではない)
+// ════════════════════════════════════════════════════════════════
+function randRange(min, max) { return min + Math.random() * (max - min); }
+function randInt(min, max)   { return Math.round(randRange(min, max)); }
+function randBool(pTrue)     { return Math.random() < (pTrue === undefined ? 0.5 : pTrue); }
+function randChoice(arr)     { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function randomizeVoice() {
+  var consType = randChoice(['OFF', 'OFF', 'K', 'T', 'P']); // OFFをやや優先(持続音を聴きやすくする)
+
+  var state = {
+    // ── VOICE PARAMETERS ──────────────────────────────────────
+    tens:       randRange(15, 95),
+    vib:        randRange(0, 60),
+    vol:        randRange(55, 90),
+    voiceSize:  randRange(55, 145),
+    release:    randRange(5, 80),
+    wobble:     randRange(10, 90),
+    rawness:    randRange(10, 100),
+    vibRealism: randRange(30, 110),
+    dynamics:   randRange(20, 90),
+    regStrain:  randRange(20, 90),
+    velSens:    randRange(90, 170),
+
+    // ── LEGATO ─────────────────────────────────────────────────
+    legato:       randBool(0.65),
+    legatoThresh: randRange(40, 200),
+    legatoBlend:  randRange(4, 16),
+
+    // ── AUTO BREATH ────────────────────────────────────────────
+    breath:       randBool(0.75),
+    breathDur:    randRange(60, 250),
+    breathDepth:  randRange(2, 30),
+    breathCurve:  randRange(10, 50),
+    breathLegato: randRange(20, 70),
+
+    // ── CONSONANT ATTACK ───────────────────────────────────────
+    cons:      consType,
+    consDur:   randRange(15, 45),
+    consPos:   randRange(10, 38),
+    consWidth: randRange(1, 5),
+
+    // ── HARMONY (SOLO=独唱 / POLY=最大4声コーラス) ─────────────
+    harmony: randChoice(['SOLO', 'POLY']),
+    v2size: randRange(-40, 40), v2tens: randRange(-40, 40), v2detune: randRange(-25, 25),
+    v3size: randRange(-40, 40), v3tens: randRange(-40, 40), v3detune: randRange(-25, 25),
+    v4size: randRange(-40, 40), v4tens: randRange(-40, 40), v4detune: randRange(-25, 25),
+
+    // ── HUMANIZE ───────────────────────────────────────────────
+    humPhase:   randRange(3, 20),
+    humVibFreq: randRange(2, 14),
+    humVibAmt:  randRange(5, 35),
+
+    // ── MOD WHEEL 母音順 (25パターンからランダム選択) ──────────
+    modOrder: String(randInt(0, 24)),
+
+    // ── ADT & STEREO ECHO ──────────────────────────────────────
+    adt:      randBool(0.8),
+    adtDepth: randRange(30, 85),
+    echo:     randBool(0.7),
+    echoDly:  randRange(100, 320),
+    echoMix:  randRange(15, 50),
+    echoFb:   randRange(10, 55),
+
+    // ── オクターブ(PCキーボード/MIDI演奏時の基準) ──────────────
+    octave: randInt(2, 6),
+  };
+
+  // ── VOICE DNA (V1〜V4個体差) ──────────────────────────────────
+  for (var vi = 0; vi < 4; vi++) {
+    state['dna' + vi + 'jit']     = randRange(0.3, 3.0);
+    state['dna' + vi + 'shim']    = randRange(0.5, 6.0);
+    state['dna' + vi + 'breath']  = randRange(2, 25);
+    state['dna' + vi + 'tilt']    = randRange(2, 35);
+    state['dna' + vi + 'pharynx'] = randRange(0, 70);
+  }
+
+  setState(state);
+
+  // ── 母音 ───────────────────────────────────────────────────
+  // 母音(XYパッド位置)はプリセットの保存対象外(ライブ演奏用パラメーター
+  // として個別管理されているため)、ここで別途ランダム化する。
+  var vowel = randChoice(['A', 'E', 'I', 'O', 'U']);
+  document.querySelectorAll('#vowelRow .btn').forEach(function (b) {
+    b.classList.toggle('on', b.dataset.v === vowel);
+  });
+  if (started) applyVowel(vowel);
+
+  // プリセットのプルダウンは「既存プリセットのどれとも一致しない」
+  // 独自状態になったことを示すため選択を外す
+  document.getElementById('presetSelect').selectedIndex = -1;
+
+  showPresetStatus(currentLang === 'en' ? 'randomized!' : 'ランダム生成!');
+  dbg('🎲 randomizeVoice() 実行 harmony=' + state.harmony + ' vowel=' + vowel);
+}
+
+document.getElementById('btnRandomize').addEventListener('click', randomizeVoice);
 
 // ── ユーザープリセット JSON エクスポート ─────────────────────────
 function exportPresetsJSON() {
@@ -7891,6 +8308,10 @@ function setLang(lang) {
   if (midiFileName && (midiFileName.textContent === 'MIDIファイル未選択' || midiFileName.textContent === 'No MIDI file selected')) {
     midiFileName.textContent = lang === 'en' ? 'No MIDI file selected' : 'MIDIファイル未選択';
   }
+  // 外部オーディオ同期: ファイル選択ボタンラベル + 未選択表示
+  var extAudioLabelEl = document.getElementById('extAudioLabel');
+  if (extAudioLabelEl) extAudioLabelEl.textContent = lang === 'en' ? 'Choose File' : 'ファイルを選択';
+  if (typeof updateExtAudioStatus === 'function') updateExtAudioStatus();
   // harmony label (POLY mode text)
   var harmEl = document.getElementById('harmonyLabel');
   if (harmEl && currentHarmony === 'POLY') {

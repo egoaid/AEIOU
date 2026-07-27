@@ -25,6 +25,9 @@ AEIOUは、Neil Thapen氏の**Pink Trombone**(声帯・声道を物理的にシ�
 - MIDIファイルプレーヤー(プレイリスト対応、テンポ自動追従)
 - VOICE DNA・VOICE CHARACTER・HUMANIZEによる声質の作り込み
 - 29種類の組み込みプリセット(合唱団・ソロボイス・雰囲気・キャラクターなど)
+- 録音機能(エンジン出力をそのままWAVファイルとして書き出し)
+- **EXTERNAL AUDIO SYNC**: 他のシンセ/ドラムマシーンWebアプリで書き出した音源を読み込み、録音と全く同じタイミングで(録音には含めずに)同時再生。書き出したWAVを同じDAWプロジェクトに読み込めばテンポが揃う
+- **🎲 RANDOMIZE**: 声質・エフェクトに関わるほぼ全パラメーターを一括ランダム生成し、「予想もしない声」や「美しい偶然」を発見できる
 - 日本語/英語UI切り替え、アプリ内取扱説明書
 - PWA対応(ホーム画面に追加してオフラインでも起動可能)
 
@@ -32,7 +35,8 @@ AEIOUは、Neil Thapen氏の**Pink Trombone**(声帯・声道を物理的にシ�
 
 1. 上記リンクをブラウザで開く
 2. ▶ STARTボタン、または鍵盤・MIDIキーボードを弾くと音が出ます
-3. 詳しい使い方はアプリ右上の「📖 取扱説明書」ボタンから確認できます
+3. ヘッダー下のプリセットバーから好みの声色をロード、または🎲 RANDOMIZEでランダムな声を試すこともできます
+4. 詳しい使い方はアプリ右上の「📖 取扱説明書」ボタンから確認できます
 
 ローカルで動かす場合は、このリポジトリをクローンして `index.html` を開くだけで動作します。MIDI入力機能はブラウザのセキュリティ仕様上、`https://` または `localhost` 経由でないと使えないため、ローカルサーバー(例: `npx serve` 等)経由での起動を推奨します。
 
@@ -76,6 +80,14 @@ Christmas parties.
 - MIDI file player with playlist support and tempo-aware auto-adjustment
 - Voice DNA, Voice Character, and Humanize systems for shaping each voice
 - 29 built-in presets (choirs, solo voices, atmospheric textures, characters)
+- Recording (captures the engine output straight to a WAV file)
+- **External Audio Sync**: load an audio file exported from another synth/
+  drum-machine web app and play it back in perfect sync with your recording
+  — without including it in the recording itself. Import the exported WAV
+  into the same DAW project as the external file and the tempo lines up
+- **🎲 Randomize**: instantly re-rolls nearly every parameter that shapes
+  the voice and effects, for discovering unexpected — sometimes beautiful —
+  voices
 - Japanese/English UI toggle, with a full in-app manual
 - PWA support (installable to your home screen, works offline)
 
@@ -84,7 +96,9 @@ Christmas parties.
 1. Open the link above in your browser
 2. Click ▶ START, or just play a note on the keyboard / a connected MIDI
    keyboard — either will start the audio engine
-3. Full instructions are available from the "📖 MANUAL" button in the header
+3. Load a voice from the preset bar below the header, or hit 🎲 RANDOMIZE
+   to roll the dice on something new
+4. Full instructions are available from the "📖 MANUAL" button in the header
 
 To run it locally, clone this repo and open `index.html` — that's it, it's
 a single self-contained file. MIDI input requires a secure context

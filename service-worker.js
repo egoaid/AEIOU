@@ -8,7 +8,15 @@
 // next time. Bump CACHE_NAME whenever core assets change so old caches are
 // cleared out on the next visit.
 
-const CACHE_NAME = 'aeiou-v1';
+// CACHE_NAME はコアアセット(index.html等)を更新するたびにバンプすること。
+// バンプすると install 時に CORE_ASSETS を丸ごと再取得し、activate 時に
+// 古いバージョンのキャッシュ(前のCACHE_NAME)を確実に破棄できる。
+// バンプしなくても stale-while-revalidate の性質上いずれ追従はするが
+// (訪問1回目でバックグラウンド更新→2回目で反映)、機能追加のような
+// まとまった変更時は明示的にバンプし、即座に一式を揃えて配信するのが安全。
+// 命名規則: index.html側のバージョン表記(<title>やJSON-LDのsoftwareVersion)
+// と揃えておくと、どのSWがどのアプリバージョンに対応するか追いやすい。
+const CACHE_NAME = 'aeiou-v1.2';
 const CORE_ASSETS = [
   './',
   './index.html',
