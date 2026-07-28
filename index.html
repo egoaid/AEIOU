@@ -401,6 +401,14 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
         <canvas id="xyPad" width="400" height="300" style="position:absolute;top:0;left:0;width:100%;height:100%;"></canvas>
       </div>
       <div class="desc" style="font-size:9px;color:var(--sub);" data-ja="クリック/ドラッグで母音を連続変化" data-en="Click/drag to morph vowels continuously"></div>
+      <div class="sep"></div>
+      <div class="pt desc" data-ja="◈ XY LOOP (母音の動きを録音してループ再生)" data-en="◈ XY LOOP (record and loop the pad motion)"></div>
+      <div class="br" style="margin-bottom:6px;">
+        <button class="btn" id="btnXyRec" style="font-size:10px;padding:4px 10px;color:var(--danger);border-color:var(--danger);">⏺ REC XY</button>
+        <button class="btn" id="btnXyLoop" style="font-size:10px;padding:4px 10px;opacity:0.4;" disabled>▶ LOOP XY</button>
+        <span id="xyLoopStatus" style="font-size:9px;color:var(--sub);align-self:center;">未録音</span>
+      </div>
+      <div class="desc" style="font-size:9px;color:var(--sub);" data-ja="REC XYでパッドのドラッグ軌跡を録音し、LOOP XYで自動的に繰り返し再生します。鍵盤演奏中でも母音が自動で動くので、パッドを押しっぱなしにする必要がありません。ループ再生中に手でパッドを触ると、触っている間だけ手動操作が優先され、離すとループに戻ります。" data-en="REC XY records your drag path on the pad; LOOP XY replays it on a loop automatically, so vowels keep moving on their own while you play the keyboard. If you touch the pad while the loop is playing, manual control takes over only while you're touching it, then the loop resumes when you let go."></div>
     </div>
       <div class="panel">
         <div class="pt">◈ CONSONANT ATTACK</div>
@@ -921,6 +929,14 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           パッドの横軸は舌の前後位置(左=後舌/BACK、右=前舌/FRONT)、縦軸は開口の狭さ(上=狭い/CLOSE、下=広い/OPEN)を表す、
           音声学の「母音四辺形」に基づいた配置です。演奏中にドラッグすると、なめらかに母音が移り変わります。
         </div>
+        <div class="manual-p">
+          <span class="manual-k">◈ XY LOOP:</span> <span class="manual-k">⏺ REC XY</span> でパッド上のドラッグ軌跡を録音し、
+          <span class="manual-k">▶ LOOP XY</span> で自動的に繰り返し再生できます。鍵盤演奏中にパッドを押しっぱなしにしなくても
+          母音が勝手に動き続けるので、両手を鍵盤に集中させたい場合に便利です。ループ再生中でも手でパッドに触れれば、
+          触れている間だけ手動操作が優先され、指を離すとループが(止まっていた分の時間経過を保ったまま)自然に再開します。
+          A/E/I/O/Uボタンを押す、または別のプリセットを読み込む/RANDOMIZEするとループは停止します。録音内容は保存されず、
+          ページを再読み込みすると消えます。
+        </div>
 
         <div class="manual-sec">4. LEGATO(レガート)</div>
         <div class="manual-p">
@@ -1105,6 +1121,14 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           vowels. The pad is laid out like a phonetic "vowel quadrilateral": the horizontal axis is tongue front/back position (left=BACK,
           right=FRONT), and the vertical axis is mouth openness (top=CLOSE/narrow, bottom=OPEN/wide). Dragging while playing produces a
           smooth glide between vowel sounds.
+        </div>
+        <div class="manual-p">
+          <span class="manual-k">◈ XY Loop:</span> <span class="manual-k">⏺ REC XY</span> records your drag path on the pad, and
+          <span class="manual-k">▶ LOOP XY</span> plays it back on a continuous loop. Vowels keep moving on their own during keyboard
+          performance without you having to hold the pad down — handy when you want both hands free for the keyboard. If you touch the
+          pad while the loop is playing, manual control takes over only while you're touching it; letting go resumes the loop right where
+          it should be (the elapsed time keeps counting even while you're overriding it). The loop stops automatically if you click an
+          A/E/I/O/U button, load a different preset, or hit RANDOMIZE. The recording isn't saved and is cleared on page reload.
         </div>
 
         <div class="manual-sec">4. Legato</div>
@@ -5595,6 +5619,7 @@ function drawXYPad() {
 function drawLoop() {
   time = Date.now() / 1000;
   tickCharacter();
+  updateXYLoopPlayback();
   drawXYPad();
   updateLfInfoPanel();
   requestAnimationFrame(drawLoop);
@@ -5604,13 +5629,33 @@ function drawLoop() {
 var xyDragging = false;
 var xyTouchId  = null; // このXYパッドが担当しているタッチのidentifier(マルチタッチ対応)
 
-function xyFromEvent(cx, cy) {
-  var rect = tractCanvas.getBoundingClientRect();
-  var nx = Math.clamp((cx - rect.left) / rect.width,  0, 1);
-  var ny = Math.clamp((cy - rect.top)  / rect.height, 0, 1);
+// ════════════════════════════════════════════════════════════════
+//  ◈ XY LOOP — XYパッドの動きを録音してループ再生する
+//  鍵盤演奏中にパッドを押しっぱなしにしなくても母音が動き続けるように
+//  するための機能。仕組みはシンプルで、録音中は実際のドラッグ座標
+//  (nx, ny)を時刻付きでサンプル配列に記録するだけ。再生時は
+//  drawLoop()(既存の毎フレーム描画ループ)に相乗りして、経過時間を
+//  録音長で割った余りから該当時刻の座標を線形補間で求め、通常の
+//  ドラッグ操作と全く同じ経路(applyXYNorm)でTract.targetDiameterへ
+//  反映する。手動でドラッグ中(xyDragging=true)はループ側の書き込みを
+//  スキップするだけで、時刻そのものは進み続けるため、指を離すと
+//  「ちょうど今あるべき位置」からループが自然に再開する。
+// ════════════════════════════════════════════════════════════════
+var xyLoop = {
+  recording:    false,
+  playing:      false,
+  samples:      [], // [{t, nx, ny}, ...] tはrecStartTimeからの経過ms
+  recStartTime: 0,
+  lastSampleT:  -1000, // 直近サンプル時刻(過剰なサンプリングの間引き用)
+  duration:     0,     // ms。STOP REC時に確定
+  playStartTime: 0,     // performance.now()基準(LOOP再生開始時刻)
+};
+
+// nx, ny (0〜1に正規化されたXYパッド座標) から母音形状を実際に適用する。
+// マウス/タッチ操作・ループ再生のどちらからも、ここを通る。
+function applyXYNorm(nx, ny) {
   XY.curNx = nx; XY.curNy = ny;
 
-  // IDW補間でtongueIndex/Diameterを算出
   var result = xyInterp(nx, ny);
   TractUI.tongueIndex    = Math.clamp(result.index,    TractUI.tongueLowerIndexBound, TractUI.tongueUpperIndexBound);
   TractUI.tongueDiameter = Math.clamp(result.diameter, TractUI.innerTongueControlRadius, TractUI.outerTongueControlRadius);
@@ -5619,6 +5664,62 @@ function xyFromEvent(cx, cy) {
   for (var i = 0; i < Tract.n; i++)
     Tract.targetDiameter[i] = Tract.restDiameter[i];
   document.querySelectorAll('#vowelRow .btn').forEach(function(b){ b.classList.remove('on'); });
+}
+
+function xyFromEvent(cx, cy) {
+  var rect = tractCanvas.getBoundingClientRect();
+  var nx = Math.clamp((cx - rect.left) / rect.width,  0, 1);
+  var ny = Math.clamp((cy - rect.top)  / rect.height, 0, 1);
+  applyXYNorm(nx, ny);
+
+  if (xyLoop.recording) {
+    var t = performance.now() - xyLoop.recStartTime;
+    // 約60Hz相当(16ms)以上間隔が空いた時だけサンプリングし、配列の肥大化を防ぐ
+    if (t - xyLoop.lastSampleT >= 16) {
+      xyLoop.samples.push({ t: t, nx: nx, ny: ny });
+      xyLoop.lastSampleT = t;
+    }
+  }
+}
+
+// 録音済みサンプル列から、時刻t(ms, 0〜duration)における位置を線形補間で求める
+function interpolateXYLoop(t) {
+  var s = xyLoop.samples;
+  if (s.length === 0) return null;
+  if (s.length === 1) return s[0];
+  var first = s[0], last = s[s.length - 1];
+  if (t <= first.t) return first;
+  if (t >= last.t) {
+    // 終端→先頭への橋渡し区間(録音停止時刻までの余白をなめらかに繋ぐ)
+    var span = xyLoop.duration - last.t;
+    var frac = span > 0 ? Math.clamp((t - last.t) / span, 0, 1) : 0;
+    return { nx: last.nx + (first.nx - last.nx) * frac, ny: last.ny + (first.ny - last.ny) * frac };
+  }
+  for (var i = 1; i < s.length; i++) {
+    if (s[i].t >= t) {
+      var a = s[i - 1], b = s[i];
+      var frac2 = (b.t - a.t) > 0 ? (t - a.t) / (b.t - a.t) : 0;
+      return { nx: a.nx + (b.nx - a.nx) * frac2, ny: a.ny + (b.ny - a.ny) * frac2 };
+    }
+  }
+  return last;
+}
+
+// 毎フレーム drawLoop() から呼ばれる。手動ドラッグ中は書き込みをスキップする
+// (時刻自体は進み続けるため、指を離せば「あるべき位置」からループが再開する)。
+function updateXYLoopPlayback() {
+  if (!xyLoop.playing || xyLoop.samples.length < 2 || xyLoop.duration <= 0) return;
+  if (xyDragging) return; // 手動操作中はループ側の反映をスキップ
+  var elapsed = (performance.now() - xyLoop.playStartTime) % xyLoop.duration;
+  var pos = interpolateXYLoop(elapsed);
+  if (pos) applyXYNorm(pos.nx, pos.ny);
+}
+
+function stopXyLoopPlayback() {
+  if (!xyLoop.playing) return;
+  xyLoop.playing = false;
+  var btn = document.getElementById('btnXyLoop');
+  if (btn) { btn.classList.remove('on'); btn.textContent = '▶ LOOP XY'; }
 }
 
 tractCanvas.addEventListener('mousedown', function(e) {
@@ -5662,6 +5763,7 @@ function endXYTouch(e) {
       xyTouchId = null;
       break;
     }
+
   }
 }
 tractCanvas.addEventListener('touchend', endXYTouch, {passive:false});
@@ -6039,9 +6141,68 @@ function updateLfInfoPanel() {
 
 document.getElementById('vowelRow').addEventListener('click', function(e) {
   var b = e.target.closest('[data-v]'); if (!b) return;
+  stopXyLoopPlayback(); // 明示的な母音選択はループより優先させる
   document.querySelectorAll('#vowelRow .btn').forEach(function(x){ x.classList.remove('on'); });
   b.classList.add('on');
   if (started) applyVowel(b.dataset.v);
+});
+
+// ── XY LOOP: REC XY / LOOP XY ボタン ──────────────────────────────
+function updateXyLoopStatusLabel() {
+  var el = document.getElementById('xyLoopStatus');
+  if (!el) return;
+  if (xyLoop.recording) {
+    el.textContent = currentLang === 'en' ? 'Recording…' : '録音中…';
+  } else if (xyLoop.samples.length >= 2) {
+    el.textContent = (xyLoop.duration / 1000).toFixed(1) + 's ' + (currentLang === 'en' ? 'recorded' : '録音済み');
+  } else {
+    el.textContent = currentLang === 'en' ? 'Not recorded' : '未録音';
+  }
+}
+
+document.getElementById('btnXyRec').addEventListener('click', function() {
+  var btn = this;
+  var loopBtn = document.getElementById('btnXyLoop');
+  if (!xyLoop.recording) {
+    // 録音開始: 新しい録音のために前回分をクリアし、再生中だったループは停止
+    stopXyLoopPlayback();
+    xyLoop.recording    = true;
+    xyLoop.samples       = [];
+    xyLoop.recStartTime  = performance.now();
+    xyLoop.lastSampleT   = -1000;
+    xyLoop.duration      = 0;
+    btn.textContent = '■ ' + (currentLang === 'en' ? 'STOP REC' : 'STOP REC');
+    btn.classList.add('on');
+    loopBtn.disabled = true;
+    loopBtn.style.opacity = '0.4';
+  } else {
+    // 録音停止
+    xyLoop.recording = false;
+    xyLoop.duration  = performance.now() - xyLoop.recStartTime;
+    btn.textContent = '⏺ REC XY';
+    btn.classList.remove('on');
+    var hasValidRecording = xyLoop.samples.length >= 2 && xyLoop.duration > 0;
+    loopBtn.disabled = !hasValidRecording;
+    loopBtn.style.opacity = hasValidRecording ? '1' : '0.4';
+    if (!hasValidRecording) {
+      alert(currentLang === 'en'
+        ? 'Recording too short — try dragging on the pad for at least a moment while recording.'
+        : '録音が短すぎます。REC XY中にパッドを少しドラッグしてから止めてください。');
+    }
+  }
+  updateXyLoopStatusLabel();
+});
+
+document.getElementById('btnXyLoop').addEventListener('click', function() {
+  if (this.disabled) return;
+  if (xyLoop.playing) {
+    stopXyLoopPlayback();
+  } else {
+    xyLoop.playing      = true;
+    xyLoop.playStartTime = performance.now();
+    this.classList.add('on');
+    this.textContent = '⏸ LOOP XY';
+  }
 });
 
 document.getElementById('bOdn').addEventListener('click', function() { octave = Math.max(1,octave-1); document.getElementById('octNum').textContent = octave; scrollPianoToOctave(octave); });
@@ -6720,6 +6881,7 @@ function getState() {
 
 // setState: オブジェクトからUIとエンジンパラメータを復元
 function setState(s) {
+  if (typeof stopXyLoopPlayback === 'function') stopXyLoopPlayback(); // プリセット読込/RANDOMIZEは明示的な母音選択のためループより優先
   function set(id, val) {
     var e=document.getElementById(id); if(e){ e.value=val; e.dispatchEvent(new Event('input')); }
   }
@@ -8359,6 +8521,7 @@ function setLang(lang) {
   var extAudioLabelEl = document.getElementById('extAudioLabel');
   if (extAudioLabelEl) extAudioLabelEl.textContent = lang === 'en' ? 'Choose File' : 'ファイルを選択';
   if (typeof updateExtAudioStatus === 'function') updateExtAudioStatus();
+  if (typeof updateXyLoopStatusLabel === 'function') updateXyLoopStatusLabel();
   // harmony label (POLY mode text)
   var harmEl = document.getElementById('harmonyLabel');
   if (harmEl && currentHarmony === 'POLY') {
