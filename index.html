@@ -402,7 +402,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
       </div>
       <div class="desc" style="font-size:9px;color:var(--sub);" data-ja="クリック/ドラッグで母音を連続変化" data-en="Click/drag to morph vowels continuously"></div>
     </div>
-      <div class="panel" style="display:none;">
+      <div class="panel">
         <div class="pt">◈ CONSONANT ATTACK</div>
         <div class="br" id="consonantRow" style="margin-bottom:8px;">
           <button class="btn on" data-cons="OFF" style="font-size:10px;padding:4px 8px;">OFF</button>
@@ -1031,7 +1031,23 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           モーダル右上の JP / EN ボタン(またはメインの言語切替と連動)で日本語・英語を切り替え可能です。
         </div>
 
-        <div class="manual-sec">14. 仕様</div>
+        <div class="manual-sec">14. CONSONANT ATTACK(子音アタック)</div>
+        <div class="manual-p">
+          発音の瞬間(ノートオン時)に、音声学でいう「破裂音」(閉鎖音、K/T/P)に近い、一瞬だけ声道を閉じてから
+          開放する効果を加える機能です。既定はOFFで、通常の発声には影響しません。
+          <span class="manual-k">🎲 RANDOMIZE</span> では一定の確率でK/T/Pのいずれかがランダムに選ばれるため、
+          ランダム生成した声に「パコパコ」というような破裂音が混ざって聞こえる場合は、この項目がONになって
+          いることが原因です。「◈ VOWEL / TONGUE POSITION」パネルの下にあります。
+        </div>
+        <ul class="manual-list">
+          <li><span class="manual-k">OFF / K / T / P:</span> Kは軟口蓋(喉の奥寄り)、Tは歯茎、Pは両唇での閉鎖に対応する
+            疑似子音です。<span class="manual-k">OFF</span>にすると、発音のたびに鳴る「パ」「タ」「カ」のような音が
+            完全に消え、母音だけの滑らかな立ち上がりに戻ります。</li>
+          <li><span class="manual-k">DURATION:</span> 閉塞を保持する時間(ms)。長いほど子音の「間」がはっきりします。</li>
+          <li><span class="manual-k">POS / WIDTH:</span> 声道内での閉塞位置と幅の微調整(上級者向け)。</li>
+        </ul>
+
+        <div class="manual-sec">15. 仕様</div>
         <table class="manual-spec">
           <tr><th>音声エンジン</th><td>Pink Trombone (Neil Thapen, 2017) — LF (Liljencrants-Fant) 声帯振動モデル + 声道導波管(waveguide)モデルによる物理モデリング歌声合成。tenseness → Rd → Ra/Rk/Rg の結合式で声質を制御。</td></tr>
           <tr><th>ポリフォニー</th><td>最大4声(独立したGlottis+Tractのペアを4基搭載)。SOLOは1声、POLYは最大4声同時発音。MIDIファイル再生時はSATB(V1〜V4)として使用。</td></tr>
@@ -1216,7 +1232,23 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           switched between Japanese and English using the JP / EN buttons at the top of this window (kept in sync with the main language toggle).
         </div>
 
-        <div class="manual-sec">14. Specifications</div>
+        <div class="manual-sec">14. Consonant Attack</div>
+        <div class="manual-p">
+          Adds a brief vocal-tract closure-and-release at the moment of note-on, similar to a stop consonant (K/T/P). It's OFF by default
+          and has no effect on normal singing. <span class="manual-k">🎲 Randomize</span> has a chance of picking K, T, or P at random, so
+          if a randomized voice has a clicky or "popping" attack on every note, this is almost always the cause. It's located below the
+          "◈ VOWEL / TONGUE POSITION" panel.
+        </div>
+        <ul class="manual-list">
+          <li><span class="manual-k">OFF / K / T / P:</span> K = velar (back of the throat), T = alveolar, P = bilabial closure
+            position. Set to <span class="manual-k">OFF</span> to remove the "pa"/"ta"/"ka"-like attack entirely and return to a smooth,
+            vowel-only onset.</li>
+          <li><span class="manual-k">DURATION:</span> how long the closure is held (ms) — longer values give a more pronounced
+            consonant gap.</li>
+          <li><span class="manual-k">POS / WIDTH:</span> fine-tunes the closure position and width along the vocal tract (advanced).</li>
+        </ul>
+
+        <div class="manual-sec">15. Specifications</div>
         <table class="manual-spec">
           <tr><th>Voice engine</th><td>Pink Trombone (Neil Thapen, 2017) — physically-modeled singing voice synthesis combining an LF
             (Liljencrants-Fant) glottal source model with a waveguide vocal-tract model. Voice quality is driven by the tenseness → Rd → Ra/Rk/Rg coupling.</td></tr>
@@ -7262,7 +7294,9 @@ function randBool(pTrue)     { return Math.random() < (pTrue === undefined ? 0.5
 function randChoice(arr)     { return arr[Math.floor(Math.random() * arr.length)]; }
 
 function randomizeVoice() {
-  var consType = randChoice(['OFF', 'OFF', 'K', 'T', 'P']); // OFFをやや優先(持続音を聴きやすくする)
+  // OFF 85% / K・T・P 各5%(以前は60%の確率でK/T/Pが選ばれ、「パコパコ」という
+  // 破裂音が頻発しがちだったため、出現頻度を大きく下げた)
+  var consType = randBool(0.85) ? 'OFF' : randChoice(['K', 'T', 'P']);
 
   var state = {
     // ── VOICE PARAMETERS ──────────────────────────────────────
