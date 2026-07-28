@@ -17,6 +17,8 @@ live from a keyboard, or load a MIDI file and let it sing a full four-part
 
 AEIOUは、Neil Thapen氏の**Pink Trombone**(声帯・声道を物理的にシミュレートするエンジン)を核にした、ブラウザで動く「歌う雪だるま」シンセサイザーです。キーボードで生演奏するほか、MIDIファイルを読み込ませれば、音域に応じて自動でソプラノ〜バスの4声(SATB)に振り分けて合唱として再生します。クリスマスパーティーで、その場で讃美歌やクリスマスソングを歌わせるために作りました。
 
+録音済みの声を切り貼りする**サンプルベース方式ではなく**、声帯・声道の運動方程式をリアルタイムに計算する**物理モデリング方式**です。そのためピッチや母音は連続的に滑らかに変化し、🎲 RANDOMIZEで生まれる声も、あらかじめ用意された選択肢からではなく、その場のパラメーターの組み合わせでしか存在しない一回限りの声になります。
+
 ### 主な機能
 
 - Pink Trombone(LF声帯モデル＋声道導波管モデル)による物理モデリング歌声合成
@@ -27,7 +29,7 @@ AEIOUは、Neil Thapen氏の**Pink Trombone**(声帯・声道を物理的にシ�
 - 29種類の組み込みプリセット(合唱団・ソロボイス・雰囲気・キャラクターなど)
 - 録音機能(エンジン出力をそのままWAVファイルとして書き出し)
 - **EXTERNAL AUDIO SYNC**: 他のシンセ/ドラムマシーンWebアプリで書き出した音源を読み込み、録音と全く同じタイミングで(録音には含めずに)同時再生。書き出したWAVを同じDAWプロジェクトに読み込めばテンポが揃う
-- **🎲 RANDOMIZE**: 声質・エフェクトに関わるほぼ全パラメーターを一括ランダム生成し、「予想もしない声」や「美しい偶然」を発見できる
+- **🎲 RANDOMIZE**: 声質・エフェクトに関わるほぼ全パラメーターを一括ランダム生成し、「予想もしない声」や「美しい偶然」を発見できる(物理モデリングならではの、あらかじめ用意された選択肢からの選択ではない、無限の組み合わせ)
 - 日本語/英語UI切り替え、アプリ内取扱説明書
 - PWA対応(ホーム画面に追加してオフラインでも起動可能)
 
@@ -71,6 +73,13 @@ and it will automatically split the parts into a four-voice (SATB) choir by
 pitch range and sing them back to you. It was built to sing carols live at
 Christmas parties.
 
+It uses **physical modeling, not sample playback** — the vocal folds and
+tract are solved as equations of motion in real time, rather than splicing
+and stretching recorded voice clips. Pitch and vowel shape morph completely
+continuously as a result, and the voices produced by 🎲 Randomize aren't
+picked from a pre-recorded pool — each one exists only for that particular
+combination of parameters.
+
 ### Features
 
 - Physically-modeled singing voice synthesis (Pink Trombone LF glottal
@@ -87,7 +96,8 @@ Christmas parties.
   into the same DAW project as the external file and the tempo lines up
 - **🎲 Randomize**: instantly re-rolls nearly every parameter that shapes
   the voice and effects, for discovering unexpected — sometimes beautiful —
-  voices
+  voices (made possible by physical modeling: not a pick from a preset
+  pool, but a genuinely new combination every time)
 - Japanese/English UI toggle, with a full in-app manual
 - PWA support (installable to your home screen, works offline)
 
