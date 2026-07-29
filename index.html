@@ -126,10 +126,6 @@ body{
   font-size:10px;letter-spacing:2px;color:var(--dim);
   display:block;font-weight:400;
 }
-.note-disp{
-  font-size:22px;font-weight:300;letter-spacing:6px;
-  color:var(--accent);
-}
 .hinfo{font-size:10px;color:var(--dim);text-align:right;line-height:2.0;}
 .dot{
   display:inline-block;width:6px;height:6px;border-radius:50%;
@@ -244,7 +240,19 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 }
 .kbinfo{font-size:10px;color:var(--sub);}
 .piano-wrap{overflow-x:auto;}
-.piano{position:relative;height:96px;user-select:none;display:flex;}
+.piano{
+  position:relative;height:96px;display:flex;
+  /* ── iOS Safari対策(.btnと同じ理由) ──────────────────────────
+     user-select:noneだけではiOS Safariで連続タップ時にテキスト選択
+     モードへ化けることがあるため、.btnと同様に-webkit系プロパティも
+     フルセットで指定する。鍵盤上の音名ラベル(.klbl)が選択状態になり
+     コピー用の虫眼鏡UIが出て以降のタップが効かなくなる問題への対策。 */
+  touch-action:manipulation;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;
+}
 .wk{
   position:relative;width:32px;height:96px;flex-shrink:0;z-index:1;
   background:linear-gradient(180deg,#F8F8F6 0%,#FFFFFF 50%,#EEEDE9 100%);
@@ -265,7 +273,12 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 }
 .bk:hover{background:#4A7B6F;}
 .bk.on{background:var(--accent);}
-.klbl{font-size:8px;color:var(--sub);}
+.klbl{
+  font-size:8px;color:var(--sub);
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
+  pointer-events:none; /* ラベル自体がタップのヒットターゲットにならないよう親(.wk)に委譲 */
+}
 .wk.on .klbl{color:var(--accent);}
 .octrow{display:flex;align-items:center;gap:6px;font-size:11px;}
 .octnum{color:var(--accent);font-weight:600;min-width:18px;text-align:center;}
@@ -324,8 +337,7 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 <body>
 <div class="hdr">
   <div class="logo"><span class="logo-ja">アエイオウ ❄</span>AEIOU<span class="logo-sub">Vocal Synthesizer Christmas Edition — v1.2</span></div>
-  <div class="note-disp" id="noteDisp">---</div>
-  <div id="audioStartupBadge" style="display:none;font-size:9px;color:#fff;background:var(--danger);padding:2px 8px;border-radius:10px;font-weight:600;text-align:center;margin-top:2px;">🔈 音声準備中…</div>
+  <div id="audioStartupBadge" style="display:none;font-size:9px;color:#fff;background:var(--danger);padding:2px 8px;border-radius:10px;font-weight:600;text-align:center;margin-top:2px;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;" title="タップして音声を有効化 / Tap to enable audio">🔈 音声準備中…</div>
   <div class="hinfo" style="display:flex;align-items:center;gap:10px;">
     <div style="text-align:right;">
       <div><span class="dot" id="sDot"></span><span id="midiLabel" style="font-size:10px;color:var(--dim);">MIDI —</span></div>
@@ -377,8 +389,6 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
           <div class="vd" id="vd3"></div>
         </div>
         <button class="btn" id="bRec" style="color:var(--danger);border-color:var(--danger);">⏺ REC</button><span id="recTime" style="font-size:10px;color:var(--danger);min-width:38px;display:inline-block;text-align:center;">0:00</span>
-        <button class="btn" id="bPanic">PANIC</button>
-        <button class="btn" id="bStart">▶ START</button>
       </div>
     </div>
     <div class="piano-wrap"><div class="piano" id="piano"></div></div>
@@ -907,9 +917,18 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 
         <div class="manual-sec">1. はじめに使うには</div>
         <div class="manual-p">
-          画面右下の <span class="manual-k">▶ START</span> ボタン、またはPCキーボード/画面上の鍵盤/MIDIキーボードのいずれかを
-          最初に操作すると音声エンジンが起動します(ブラウザの自動再生制限のため、必ず何らかの操作が必要です)。
+          PCキーボード/画面上の鍵盤/画面タップのいずれかを最初に操作すると、音声エンジンが自動的に起動します
+          (ブラウザの自動再生制限のため、必ず何らかの操作が必要ですが、特別なボタンを押す必要はありません)。
           起動後はエンジン状態ドット(ヘッダー左上)が点灯し、雪だるまが画面上部の劇場で待機します。
+        </div>
+        <div class="manual-p" style="font-size:11.5px;">
+          <span class="manual-k">MIDIキーボードだけを弾く場合の注意:</span> ブラウザの仕様上、
+          <span class="manual-k">MIDIキーボードからの入力だけでは音声エンジンをアンロックできません</span>
+          (画面のクリック/タップ/キー押下のような「信頼できるユーザー操作」としてMIDI入力は扱われないためです)。
+          その場合、ヘッダーに <span class="manual-k">🔈 音声準備中…</span> のバッジが表示されたまま音が出ませんが、
+          <span class="manual-k">このバッジ自体をタップ/クリックすれば即座に有効化されます</span>
+          (しばらく表示され続けると「🔈 タップして音声を有効化」という文言に変わります)。
+          画面のどこか1箇所でも既にクリック/タップ済みであれば、以後はMIDIだけで問題なく演奏できます。
         </div>
 
         <div class="manual-sec">2. 演奏方法</div>
@@ -918,8 +937,8 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
             <span class="manual-kbd">Z</span> / <span class="manual-kbd">X</span> でオクターブを上下できます(現在のオクターブは鍵盤セクションに表示)。</li>
           <li><span class="manual-k">マウス/タッチ:</span> 画面下部のピアノ鍵盤をクリック/タップ、またはドラッグして複数の鍵を弾けます。</li>
           <li><span class="manual-k">MIDIキーボード:</span> ブラウザのMIDIアクセス許可後、自動的に接続されます(ヘッダーの「MIDI ✓」表示で確認可)。
-            Note On/Off、ベロシティ、モジュレーションホイール(CC1)、ピッチベンド、オールノートオフ(CC123)に対応しています。</li>
-          <li><span class="manual-k">PANIC:</span> 発音中の音をすべて即座に停止します。音が止まらなくなった場合に使用してください。</li>
+            Note On/Off、ベロシティ、モジュレーションホイール(CC1)、ピッチベンド、オールノートオフ(CC123)に対応しています。
+            画面に一度も触れていない状態でMIDIだけを弾く場合は、上記1章の注意を参照してください。</li>
           <li><span class="manual-k">⏺ REC:</span> エンジン出力をそのまま録音し、停止するとWAVファイルとして自動ダウンロードされます。</li>
         </ul>
 
@@ -1099,9 +1118,18 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
 
         <div class="manual-sec">1. Getting Started</div>
         <div class="manual-p">
-          Click <span class="manual-k">▶ START</span> at the bottom right, or simply play a note on the PC keyboard, on-screen piano, or a
-          connected MIDI keyboard — any of these will start the audio engine (browsers require a user interaction before audio can play).
-          Once running, the status dot in the header lights up and the snowman waits on stage at the top of the screen.
+          Just play a note — on the PC keyboard, on-screen piano, or by tapping the screen — and the audio engine starts automatically
+          (browsers require a user interaction before audio can play, but there's no special button to press). Once running, the status dot
+          in the header lights up and the snowman waits on stage at the top of the screen.
+        </div>
+        <div class="manual-p" style="font-size:11.5px;">
+          <span class="manual-k">A note about playing MIDI-only:</span> due to browser policy,
+          <span class="manual-k">MIDI keyboard input alone cannot unlock the audio engine</span>
+          (MIDI events aren't treated as a "trusted user gesture" the way a click, tap, or key press is). If that happens, you'll see the
+          <span class="manual-k">🔈 Preparing audio…</span> badge stay up in the header with no sound — in that case,
+          <span class="manual-k">just tap or click the badge itself</span> to enable audio immediately (it changes to "🔈 Tap here to
+          enable audio" if it's been showing for a moment). Once you've clicked or tapped anywhere on the page even once, MIDI alone
+          works fine from then on.
         </div>
 
         <div class="manual-sec">2. Ways to Play</div>
@@ -1110,8 +1138,8 @@ input[type=range]:disabled::-webkit-slider-thumb{cursor:not-allowed;border-color
             <span class="manual-kbd">Z</span> / <span class="manual-kbd">X</span> shift the octave down/up (current octave shown in the keyboard section).</li>
           <li><span class="manual-k">Mouse / touch:</span> click or tap the on-screen piano; drag across keys to play several notes in sequence.</li>
           <li><span class="manual-k">MIDI keyboard:</span> connects automatically once you grant MIDI access (check the "MIDI ✓" indicator in the header).
-            Supports Note On/Off with velocity, Modulation Wheel (CC1), Pitch Bend, and All Notes Off (CC123).</li>
-          <li><span class="manual-k">PANIC:</span> instantly silences every currently sounding note — use this if a note gets stuck.</li>
+            Supports Note On/Off with velocity, Modulation Wheel (CC1), Pitch Bend, and All Notes Off (CC123). If you're playing MIDI
+            without having touched the page first, see the note in section 1 above.</li>
           <li><span class="manual-k">⏺ REC:</span> records the engine's output; stopping the recording automatically downloads a WAV file.</li>
         </ul>
 
@@ -1361,13 +1389,35 @@ function dbgRender() {
 // AudioContextが実際に'running'になるまでの数百ms〜1秒程度の間、
 // 「押しても鳴らない」ことをユーザーが故障と誤解しないよう、
 // 画面上に準備中であることを明示する。
+//
+// ブラウザの自動再生ポリシー上、AudioContext.resume()は「信頼できる
+// ユーザー操作」(click/touchstart/keydown等)の中でしか成功しない。
+// MIDIキーボードからのMIDIMessageEventはこれに該当しないため、
+// MIDI入力だけではどうしても音声をアンロックできないケースがある
+// (画面に一切触れずMIDIキーボードだけを弾いた場合など)。
+// そのため本バッジ自体をタップ/クリック可能にし、詰まった場合の
+// 「押せば必ず解決する」明確な脱出口として機能させる。一定時間
+// (1.2秒)経っても消えない場合は「詰まっている」と判断し、
+// より能動的な文言に切り替える。
+var audioBadgeUpgradeTimer = null;
 function showAudioStartupBadge() {
   var el = document.getElementById('audioStartupBadge');
-  if (el) el.style.display = 'block';
+  if (el) {
+    el.style.display = 'block';
+    el.textContent = currentLang === 'en' ? '🔈 Preparing audio…' : '🔈 音声準備中…';
+  }
+  if (audioBadgeUpgradeTimer) clearTimeout(audioBadgeUpgradeTimer);
+  audioBadgeUpgradeTimer = setTimeout(function() {
+    var el2 = document.getElementById('audioStartupBadge');
+    if (el2 && el2.style.display !== 'none') {
+      el2.textContent = currentLang === 'en' ? '🔈 Tap here to enable audio' : '🔈 タップして音声を有効化';
+    }
+  }, 1200);
 }
 function hideAudioStartupBadge() {
   var el = document.getElementById('audioStartupBadge');
   if (el) el.style.display = 'none';
+  if (audioBadgeUpgradeTimer) { clearTimeout(audioBadgeUpgradeTimer); audioBadgeUpgradeTimer = null; }
 }
 
 function dbgInitPanel() {
@@ -4005,13 +4055,6 @@ function legatoBreathStrength(semitoneInterval) {
   return amt * intervalScale;
 }
 
-// noteDisp に現在POLYで鳴っている全音を表示
-function updatePolyNoteDisp() {
-  var names = [];
-  for (var vi = 0; vi < 3; vi++) if (polyNote[vi] >= 0) names.push(midiToName(polyNote[vi]));
-  document.getElementById('noteDisp').textContent = names.length ? names.join(' ') : '---';
-}
-
 // ── Voice単位のnoteOn/noteOff ────────────────────────────────────
 // HARMONYのoffsetは適用しない＝各Voiceが完全に独立したピッチを持つ
 function voiceNoteOn(vi, midi, velocity) {
@@ -4082,7 +4125,6 @@ function voiceNoteOn(vi, midi, velocity) {
   requestAnimationFrame(function() {
     if (prevNote >= 0 && prevNote !== midi) highlightKey(prevNote, false);
     highlightKey(midi, true);
-    updatePolyNoteDisp();
     document.getElementById('vd'+vi).classList.add('on');
   });
 }
@@ -4096,7 +4138,6 @@ function voiceNoteOff(vi, midi) {
 
   requestAnimationFrame(function() {
     highlightKey(midi, false);
-    updatePolyNoteDisp();
     document.getElementById('vd'+vi).classList.remove('on');
   });
 }
@@ -4288,7 +4329,6 @@ function noteOn(midi, velocity) {
   var _midi = midi, _tens = tens, _vi = vi;
   requestAnimationFrame(function() {
     highlightKey(_midi, true);
-    document.getElementById('noteDisp').textContent = midiToName(_midi);
     for (var dvi = 0; dvi < 4; dvi++) {
       var dEl = document.getElementById('vd' + dvi);
       if (dEl) dEl.classList.toggle('on', dvi === _vi);
@@ -4312,7 +4352,6 @@ function noteOff(midi) {
   Glottis.isTouched = false;
   var _midi = midi, _vi = soloActiveVoice;
   requestAnimationFrame(function() {
-    document.getElementById('noteDisp').textContent = '---';
     var dEl = document.getElementById('vd' + _vi);
     if (dEl) dEl.classList.remove('on');
     highlightKey(_midi, false);
@@ -4337,7 +4376,6 @@ function allOff() {
   if (currentNote >= 0) highlightKey(currentNote, false);
   currentNote = -1;
 
-  document.getElementById('noteDisp').textContent = '---';
   for (var vi=0; vi<4; vi++) document.getElementById('vd'+vi).classList.remove('on');
   heldKeys.clear();
 }
@@ -4712,8 +4750,6 @@ function startInstrument() {
 
   started = true;
   document.getElementById('sDot').classList.add('on');
-  document.getElementById('bStart').classList.add('on');
-  document.getElementById('bStart').textContent = '▶ ON';
   dbg('startInstrument() 完了 state=' + AudioSystem.audioContext.state);
   if (AudioSystem.audioContext.state !== 'running') {
     showAudioStartupBadge();
@@ -5952,7 +5988,13 @@ function initMIDI() {
 initMIDI();
 function onMIDI(msg) {
   var st=msg.data[0], note=msg.data[1], vel=msg.data[2], cmd=st&0xf0;
-  if (cmd===0x90 && vel>0) noteOn(note, vel);
+  if (cmd===0x90 && vel>0) {
+    // 画面を一切タップ/クリックしていない状態でMIDIキーボードだけを弾いた場合でも、
+    // 他の入力方法(鍵盤/PCキーボード/XYパッド)と同じくensureAudioReady()経由で
+    // 自動的にエンジンを起動してから発音する。
+    if (!started) ensureAudioReady(function(){ noteOn(note, vel); });
+    else noteOn(note, vel);
+  }
   else if (cmd===0x80 || (cmd===0x90 && vel===0)) noteOff(note);
   else if (cmd===0xb0 && note===1) { modWheelVal=vel; applyModWheel(vel); } // CC#1 Mod Wheel
   else if (cmd===0xb0 && note===123) allOff();
@@ -6207,8 +6249,6 @@ document.getElementById('btnXyLoop').addEventListener('click', function() {
 
 document.getElementById('bOdn').addEventListener('click', function() { octave = Math.max(1,octave-1); document.getElementById('octNum').textContent = octave; scrollPianoToOctave(octave); });
 document.getElementById('bOup').addEventListener('click', function() { octave = Math.min(7,octave+1); document.getElementById('octNum').textContent = octave; scrollPianoToOctave(octave); });
-document.getElementById('bPanic').addEventListener('click', allOff);
-document.getElementById('bStart').addEventListener('click', startInstrument);
 
 // ── ADT / Echo パラメータ更新ヘルパー ────────────────────────────
 function updateADT(pct) {
@@ -6279,34 +6319,9 @@ document.getElementById('btnEcho').addEventListener('click', function() {
 
 // ── 録音 ─────────────────────────────────────────────────────────
 document.getElementById('bRec').addEventListener('click', function() {
-  if (!started) { alert('STARTを押してから録音してください'); return; }
   if (!isRecording) {
-    // 録音開始
-    recChunks = [];
-    // WAV書き出しのためOgg/webm→変換ではなく、
-    // MediaRecorderが対応するmimeを選ぶ。WAV変換はstop時に手動で行う
-    var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=pcm')
-      ? 'audio/webm;codecs=pcm'
-      : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
-    mediaRecorder = new MediaRecorder(recDest.stream, mime ? {mimeType: mime} : {});
-    mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) recChunks.push(e.data); };
-    mediaRecorder.onstop = exportWAV;
-    // ── 録音開始と外部オーディオ再生を同一タイミングで発火 ────────
-    // 両方とも同じAudioContextのクロックに乗って進行するため、
-    // 一度開始すればズレが蓄積(ドリフト)することはない。
-    mediaRecorder.start();
-    startExtAudioPlayback();
-    isRecording = true;
-    document.getElementById('bRec').textContent = '⏹ STOP';
-    document.getElementById('bRec').style.background = 'var(--danger)';
-    document.getElementById('bRec').style.color = '#fff';
-    // タイマー開始
-    recStartTime = Date.now();
-    recTimerID = setInterval(function() {
-      var s = Math.floor((Date.now() - recStartTime) / 1000);
-      document.getElementById('recTime').textContent =
-        Math.floor(s/60) + ':' + ('0'+s%60).slice(-2);
-    }, 500);
+    if (!started) { ensureAudioReady(beginRecording); }
+    else beginRecording();
   } else {
     // 録音停止
     mediaRecorder.stop();
@@ -6319,6 +6334,34 @@ document.getElementById('bRec').addEventListener('click', function() {
     document.getElementById('recTime').textContent = '0:00';
   }
 });
+
+function beginRecording() {
+  recChunks = [];
+  // WAV書き出しのためOgg/webm→変換ではなく、
+  // MediaRecorderが対応するmimeを選ぶ。WAV変換はstop時に手動で行う
+  var mime = MediaRecorder.isTypeSupported('audio/webm;codecs=pcm')
+    ? 'audio/webm;codecs=pcm'
+    : MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+  mediaRecorder = new MediaRecorder(recDest.stream, mime ? {mimeType: mime} : {});
+  mediaRecorder.ondataavailable = function(e) { if (e.data.size > 0) recChunks.push(e.data); };
+  mediaRecorder.onstop = exportWAV;
+  // ── 録音開始と外部オーディオ再生を同一タイミングで発火 ────────
+  // 両方とも同じAudioContextのクロックに乗って進行するため、
+  // 一度開始すればズレが蓄積(ドリフト)することはない。
+  mediaRecorder.start();
+  startExtAudioPlayback();
+  isRecording = true;
+  document.getElementById('bRec').textContent = '⏹ STOP';
+  document.getElementById('bRec').style.background = 'var(--danger)';
+  document.getElementById('bRec').style.color = '#fff';
+  // タイマー開始
+  recStartTime = Date.now();
+  recTimerID = setInterval(function() {
+    var s = Math.floor((Date.now() - recStartTime) / 1000);
+    document.getElementById('recTime').textContent =
+      Math.floor(s/60) + ':' + ('0'+s%60).slice(-2);
+  }, 500);
+}
 
 // WAVエクスポート: AudioContextでデコード→Float32→16bit PCM WAV変換
 function exportWAV() {
@@ -6773,24 +6816,28 @@ document.addEventListener('fullscreenchange', function() {
   _lastCharTime = Date.now() / 1000;
   CHAR.nextBlinkTime = 1.5 + Math.random() * 2;
   CHAR.nextIdleTime  = 2.0 + Math.random() * 3;
-  var running = true;
   function loop() {
-    if (!running) return;
+    // startInstrument()が完了(started=true)したら、以後はdrawLoop()側の
+    // tickCharacter()呼び出しに一本化するためこちらは自動的に停止する。
+    // 入力方法(鍵盤/MIDI/XYパッド等)を問わず、startedフラグさえ見ていれば
+    // 確実に切り替われるので、個別のクリック/キー入力イベントに頼らない。
+    if (started) return;
     tickCharacter();
     requestAnimationFrame(loop);
   }
   loop();
-  // startInstrument後にdrawLoopが引き継ぐので停止
-  var _origStart = window.startInstrument || function(){};
-  document.getElementById('bStart').addEventListener('click', function() {
-    running = false;
-  }, { once: true });
-  ['keydown','mousedown','touchstart'].forEach(function(ev) {
-    document.addEventListener(ev, function() { running = false; }, { once: true });
-  });
 })();
 
 // ── レガート UI ──────────────────────────────────────────────────
+// ── 起動準備中バッジ: タップで音声アンロックを試みる ────────────────
+// MIDIキーボードのみでの操作(信頼できるユーザー操作に該当しないため
+// resume()が成功しない)で詰まった場合の明確な脱出口。
+// click イベント自体が「信頼できるユーザー操作」なので、ここから
+// ensureAudioReady()を呼べば確実にAudioContextをアンロックできる。
+document.getElementById('audioStartupBadge').addEventListener('click', function() {
+  ensureAudioReady(function(){});
+});
+
 document.getElementById('btnLegato').addEventListener('click', function() {
   legatoParams.enabled = !legatoParams.enabled;
   this.classList.toggle('on', legatoParams.enabled);
@@ -8476,7 +8523,6 @@ function stopMidiFile() {
     if (polyNote[vi] >= 0) voiceNoteOff(vi, polyNote[vi]);
   }
   for (var vi=0; vi<4; vi++) document.getElementById('vd'+vi).classList.remove('on');
-  document.getElementById('noteDisp').textContent = '---';
 }
 
 // ================================================================
